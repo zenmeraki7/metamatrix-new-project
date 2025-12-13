@@ -1,15 +1,39 @@
 import { Select, TextField, Box } from "@shopify/polaris";
+import React from "react";
 import { useFilterStore } from "../../state/filterStore";
 
-export default function FilterRule({ index, rule }) {
+type Operator = "eq" | "contains" | "gt" | "lt";
+type FieldType = "vendor" | "title" | "tag" | "metafield";
+
+export type FilterRuleType = {
+  field: FieldType;
+  operator: Operator;
+  value: string;
+};
+
+type FilterRuleProps = {
+  index: number;
+  rule: FilterRuleType;
+};
+
+export default function FilterRule({
+  index,
+  rule,
+}: FilterRuleProps): JSX.Element {
   const updateRule = useFilterStore((s) => s.updateRule);
 
-  const handleChange = (field, value) => {
-    updateRule(index, { ...rule, [field]: value });
+  const handleChange = <K extends keyof FilterRuleType>(
+    field: K,
+    value: FilterRuleType[K]
+  ): void => {
+    updateRule(index, {
+      ...rule,
+      [field]: value,
+    });
   };
 
   return (
-    <Box padding="2">
+    <Box padding="200">
       <Select
         label="Field"
         options={[
@@ -19,7 +43,7 @@ export default function FilterRule({ index, rule }) {
           { label: "Metafield", value: "metafield" },
         ]}
         value={rule.field}
-        onChange={(v) => handleChange("field", v)}
+        onChange={(v) => handleChange("field", v as FieldType)}
       />
 
       <Select
@@ -31,7 +55,7 @@ export default function FilterRule({ index, rule }) {
           { label: "Less Than", value: "lt" },
         ]}
         value={rule.operator}
-        onChange={(v) => handleChange("operator", v)}
+        onChange={(v) => handleChange("operator", v as Operator)}
       />
 
       <TextField

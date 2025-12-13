@@ -2,9 +2,27 @@ import { Box, Text } from "@shopify/polaris";
 import React from "react";
 import { useProductStore } from "../../state/productStore";
 
-export default function BulkPreviewRow({ productId }) {
+type BulkPreviewRowProps = {
+  productId: string;
+};
+
+type BulkFieldChange = {
+  before: unknown;
+  after: unknown;
+};
+
+type BulkChangesMap = Record<string, BulkFieldChange>;
+
+export default function BulkPreviewRow({
+  productId,
+}: BulkPreviewRowProps): JSX.Element {
   const product = useProductStore((s) => s.productMap[productId]);
-  const changes = useProductStore((s) => s.bulkChanges[productId]);
+  const changes: BulkChangesMap | undefined =
+    useProductStore((s) => s.bulkChanges[productId]);
+
+  if (!product || !changes) {
+    return <></>;
+  }
 
   const fields = Object.keys(changes);
 
@@ -26,11 +44,11 @@ export default function BulkPreviewRow({ productId }) {
 
       {/* BEFORE */}
       <div style={{ flex: 2 }}>
-        {fields.map((f) => (
+        {fields.map((field) => (
           <DiffCell
-            key={f}
-            value={changes[f].before}
-            field={f}
+            key={field}
+            field={field}
+            value={changes[field].before}
             tone="subdued"
           />
         ))}
@@ -38,11 +56,11 @@ export default function BulkPreviewRow({ productId }) {
 
       {/* AFTER */}
       <div style={{ flex: 2 }}>
-        {fields.map((f) => (
+        {fields.map((field) => (
           <DiffCell
-            key={f}
-            value={changes[f].after}
-            field={f}
+            key={field}
+            field={field}
+            value={changes[field].after}
             tone="success"
           />
         ))}
@@ -51,9 +69,19 @@ export default function BulkPreviewRow({ productId }) {
   );
 }
 
-function DiffCell({ value, field, tone }) {
+type DiffCellProps = {
+  value: unknown;
+  field: string;
+  tone?: "subdued" | "success" | "critical" | "warning";
+};
+
+function DiffCell({
+  value,
+  field,
+  tone = "subdued",
+}: DiffCellProps): JSX.Element {
   return (
-    <Box paddingBlock="1">
+    <Box paddingBlock="100">
       <Text tone={tone} as="span">
         {field}: {String(value)}
       </Text>

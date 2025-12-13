@@ -6,20 +6,33 @@ import {
   Divider,
   Scrollable,
 } from "@shopify/polaris";
+import React from "react";
 
 import { FILTER_FIELDS } from "../../config/filterFields";
 import { useFilterStore } from "../../state/filterStore";
 
-export default function FieldPickerModal() {
+type RulePosition = {
+  groupIndex: number;
+  ruleIndex: number;
+};
+
+type FieldType = "string" | "number" | "date" | "boolean";
+
+export default function FieldPickerModal(): JSX.Element | null {
   const open = useFilterStore((s) => s.fieldPickerOpen);
   const close = useFilterStore((s) => s.closeFieldPicker);
-  const rulePos = useFilterStore((s) => s.fieldPickerRule);
+  const rulePos = useFilterStore((s) => s.fieldPickerRule) as RulePosition | null;
   const updateRule = useFilterStore((s) => s.updateRule);
   const rebuildAST = useFilterStore((s) => s.rebuildAST);
 
   if (!open || !rulePos) return null;
 
-  const selectField = (label, fieldType, path, type) => {
+  const selectField = (
+    label: string,
+    _fieldScope: "product" | "variant" | "inventory",
+    path: string,
+    type: FieldType
+  ): void => {
     updateRule(rulePos.groupIndex, rulePos.ruleIndex, {
       field: path,
       fieldLabel: label,
@@ -31,7 +44,7 @@ export default function FieldPickerModal() {
     close();
   };
 
-  const selectMetafield = () => {
+  const selectMetafield = (): void => {
     updateRule(rulePos.groupIndex, rulePos.ruleIndex, {
       fieldType: "metafield",
       fieldLabel: "Metafield",
@@ -42,12 +55,7 @@ export default function FieldPickerModal() {
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={close}
-      title="Select a Field"
-      large
-    >
+    <Modal open={open} onClose={close} title="Select a Field" large>
       <Modal.Section>
         <Scrollable style={{ height: "60vh" }}>
           {/* PRODUCT FIELDS */}
@@ -57,7 +65,12 @@ export default function FieldPickerModal() {
                 key={key}
                 label={cfg.label}
                 onClick={() =>
-                  selectField(cfg.label, "product", `product.${key}`, cfg.type)
+                  selectField(
+                    cfg.label,
+                    "product",
+                    `product.${key}`,
+                    cfg.type as FieldType
+                  )
                 }
               />
             ))}
@@ -72,7 +85,12 @@ export default function FieldPickerModal() {
                 key={key}
                 label={cfg.label}
                 onClick={() =>
-                  selectField(cfg.label, "variant", `variant.${key}`, cfg.type)
+                  selectField(
+                    cfg.label,
+                    "variant",
+                    `variant.${key}`,
+                    cfg.type as FieldType
+                  )
                 }
               />
             ))}
@@ -88,7 +106,12 @@ export default function FieldPickerModal() {
                   key={key}
                   label={cfg.label}
                   onClick={() =>
-                    selectField(cfg.label, "inventory", `inventory.${key}`, cfg.type)
+                    selectField(
+                      cfg.label,
+                      "inventory",
+                      `inventory.${key}`,
+                      cfg.type as FieldType
+                    )
                   }
                 />
               )
@@ -99,7 +122,10 @@ export default function FieldPickerModal() {
 
           {/* METAFIELD */}
           <Section title="Metafield">
-            <FieldItem label="Custom Metafield..." onClick={selectMetafield} />
+            <FieldItem
+              label="Custom Metafield..."
+              onClick={selectMetafield}
+            />
           </Section>
         </Scrollable>
       </Modal.Section>
@@ -107,18 +133,32 @@ export default function FieldPickerModal() {
   );
 }
 
-function Section({ title, children }) {
+/* ---------- Sub-components ---------- */
+
+type SectionProps = {
+  title: string;
+  children: React.ReactNode;
+};
+
+function Section({ title, children }: SectionProps): JSX.Element {
   return (
-    <Box paddingBlock="4">
-      <Text variant="headingSm">{title}</Text>
-      <Box paddingBlock="2">{children}</Box>
+    <Box paddingBlock="400">
+      <Text variant="headingSm" as="h3">
+        {title}
+      </Text>
+      <Box paddingBlock="200">{children}</Box>
     </Box>
   );
 }
 
-function FieldItem({ label, onClick }) {
+type FieldItemProps = {
+  label: string;
+  onClick: () => void;
+};
+
+function FieldItem({ label, onClick }: FieldItemProps): JSX.Element {
   return (
-    <Box padding="2">
+    <Box padding="200">
       <Button fullWidth onClick={onClick}>
         {label}
       </Button>
@@ -126,7 +166,9 @@ function FieldItem({ label, onClick }) {
   );
 }
 
-function getDefaultOperator(type) {
+/* ---------- Helpers ---------- */
+
+function getDefaultOperator(type: FieldType): string {
   switch (type) {
     case "number":
       return "eq";

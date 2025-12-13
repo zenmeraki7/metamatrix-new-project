@@ -1,14 +1,20 @@
 import { Card, Button } from "@shopify/polaris";
+import React from "react";
 import FilterRule from "./FilterRule";
 import { useFilterStore } from "../../state/filterStore";
 
-export default function FilterGroup() {
+type Rule = {
+  // extend this as your rule model grows
+  fieldType?: string;
+};
+
+export default function FilterGroup(): JSX.Element {
   const rules = useFilterStore((s) => s.rules);
   const addRule = useFilterStore((s) => s.addRule);
 
   return (
     <Card title="Filter Rules" sectioned>
-      {rules.map((rule, idx) => (
+      {rules.map((rule: Rule, idx: number) => (
         <FilterRule key={idx} index={idx} rule={rule} />
       ))}
 

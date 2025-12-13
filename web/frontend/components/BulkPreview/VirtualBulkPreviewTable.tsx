@@ -2,10 +2,9 @@ import React, { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useProductStore } from "../../state/productStore";
 import BulkPreviewRow from "./BulkPreviewRow";
-import { Box } from "@shopify/polaris";
 
-export default function VirtualBulkPreviewTable() {
-  const parentRef = useRef(null);
+export default function VirtualBulkPreviewTable(): JSX.Element {
+  const parentRef = useRef<HTMLDivElement | null>(null);
 
   const bulkChanges = useProductStore((s) => s.bulkChanges);
   const ids = Object.keys(bulkChanges);

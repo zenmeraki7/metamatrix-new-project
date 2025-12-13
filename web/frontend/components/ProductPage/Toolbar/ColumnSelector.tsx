@@ -1,10 +1,10 @@
 import { Button, Popover, OptionList } from "@shopify/polaris";
-import { useState } from "react";
-import { useProductStore } from "../../state/productStore";
+import React, { useState } from "react";
+import { useProductStore } from "../../../state/productStore";
 
-export default function ColumnSelector() {
-  const [open, setOpen] = useState(false);
-  const toggle = () => setOpen((o) => !o);
+export default function ColumnSelector(): JSX.Element {
+  const [open, setOpen] = useState<boolean>(false);
+  const toggle = (): void => setOpen((o) => !o);
 
   const columns = useProductStore((s) => s.columns);
   const setColumns = useProductStore((s) => s.setColumns);
@@ -17,7 +17,7 @@ export default function ColumnSelector() {
     >
       <OptionList
         title="Visible Columns"
-        onChange={(selected) => setColumns(selected)}
+        onChange={(selected: string[]) => setColumns(selected)}
         selected={columns}
         options={[
           { label: "Title", value: "title" },

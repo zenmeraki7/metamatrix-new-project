@@ -1,10 +1,10 @@
 import { Popover, Button, ActionList } from "@shopify/polaris";
-import { useState } from "react";
-import { useProductStore } from "../../state/productStore";
+import React, { useState } from "react";
+import { useProductStore } from "../../../state/productStore";
 
-export default function BulkActionsDropdown() {
-  const [open, setOpen] = useState(false);
-  const toggle = () => setOpen((o) => !o);
+export default function BulkActionsDropdown(): JSX.Element {
+  const [open, setOpen] = useState<boolean>(false);
+  const toggle = (): void => setOpen((o) => !o);
 
   const openBulkModal = useProductStore((s) => s.openBulkModal);
 
@@ -19,14 +19,14 @@ export default function BulkActionsDropdown() {
         items={[
           {
             content: "Bulk Edit",
-            onAction: () => {
+            onAction: (): void => {
               toggle();
               openBulkModal();
             },
           },
           {
             content: "Bulk Export",
-            onAction: () => alert("Export not implemented"),
+            onAction: (): void => alert("Export not implemented"),
           },
         ]}
       />

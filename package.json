@@ -12,6 +12,7 @@
     "deploy": "shopify app deploy"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.13",
     "zustand": "^5.0.9"
   },
   "author": "DELL",

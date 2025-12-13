@@ -1,19 +1,28 @@
 import { TextField } from "@shopify/polaris";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { shallow } from "zustand/shallow";
 import { useProductStore } from "../../../state/productStore";
 
-function SKUEditorComponent({ id }) {
+type SKUEditorProps = {
+  id: string;
+};
+
+function SKUEditorComponent({ id }: SKUEditorProps): JSX.Element {
   const sku = useProductStore(
-    (s) => s.productMap[id]?.sku,
+    (s) => s.productMap[id]?.sku ?? "",
     shallow
   );
 
   const updateField = useProductStore((s) => s.updateField);
 
-  const [localValue, setLocalValue] = useState(sku);
+  const [localValue, setLocalValue] = useState<string>(sku);
 
-  const onChange = (value) => {
+  // Sync local state if SKU changes externally
+  useEffect(() => {
+    setLocalValue(sku);
+  }, [sku]);
+
+  const onChange = (value: string): void => {
     setLocalValue(value);
     updateField(id, "sku", value);
   };

@@ -1,24 +1,23 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Card, Box } from "@shopify/polaris";
 import { useProductStore } from "../../state/productStore";
-import ProductRow from "./ProductRow";
+import ProductRow from "../ProductTable/ProductRow";
 
-export default function VirtualProductTable() {
-  const parentRef = useRef(null);
+export default function VirtualProductTable(): JSX.Element {
+  const parentRef = useRef<HTMLDivElement | null>(null);
 
-  // from Zustand store
+  // Zustand store
   const products = useProductStore((s) => s.products);
   const columns = useProductStore((s) => s.columns);
 
-  // Height of each row
   const rowHeight = 52;
 
   const rowVirtualizer = useVirtualizer({
     count: products.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => rowHeight,
-    overscan: 12, // pre-render extra rows for smoothness
+    overscan: 12,
   });
 
   const virtualItems = rowVirtualizer.getVirtualItems();
@@ -28,9 +27,11 @@ export default function VirtualProductTable() {
       {/* Header */}
       <Box padding="2" background="bg-subdued">
         <div style={{ display: "flex", padding: "8px 12px", fontWeight: 600 }}>
-          <div style={{ width: 40 }}></div> {/* checkbox */}
+          <div style={{ width: 40 }}></div> {/* Checkbox column */}
           {columns.map((col) => (
-            <div key={col} style={{ flex: 1 }}>{col.toUpperCase()}</div>
+            <div key={col} style={{ flex: 1 }}>
+              {col.toUpperCase()}
+            </div>
           ))}
           <div style={{ width: 80 }}>Actions</div>
         </div>

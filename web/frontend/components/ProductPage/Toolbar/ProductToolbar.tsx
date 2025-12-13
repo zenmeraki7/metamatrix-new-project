@@ -1,9 +1,10 @@
 import { Box, Button, ButtonGroup } from "@shopify/polaris";
+import React from "react";
 import BulkActionsDropdown from "./BulkActionsDropdown";
 import ColumnSelector from "./ColumnSelector";
-import { useProductStore } from "../../state/productStore";
+import { useProductStore } from "../../../state/productStore";
 
-export default function ProductToolbar() {
+export default function ProductToolbar(): JSX.Element {
   const selectedCount = useProductStore((s) => s.selection.length);
 
   return (

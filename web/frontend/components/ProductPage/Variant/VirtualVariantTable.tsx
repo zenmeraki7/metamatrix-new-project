@@ -1,13 +1,19 @@
 import React, { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import VariantRow from "./VariantRow";
-import { useProductStore } from "../../state/productStore";
+import { useProductStore } from "../../../state/productStore";
 
-export default function VirtualVariantTable({ productId }) {
-  const parentRef = useRef(null);
+type VirtualVariantTableProps = {
+  productId: string;
+};
+
+export default function VirtualVariantTable({
+  productId,
+}: VirtualVariantTableProps): JSX.Element {
+  const parentRef = useRef<HTMLDivElement | null>(null);
 
   const variants = useProductStore(
-    (s) => s.productMap[productId]?.variants || []
+    (s) => s.productMap[productId]?.variants ?? []
   );
 
   const rowVirtualizer = useVirtualizer({

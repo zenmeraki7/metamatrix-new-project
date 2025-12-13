@@ -1,7 +1,21 @@
 import { Frame, ContextualSaveBar, Card, Text } from "@shopify/polaris";
+import React from "react";
 import { useProductStore } from "../../state/productStore";
 
-export default function ProductPreviewDrawer({ product }) {
+type Product = {
+  id: string;
+  title: string;
+  vendor: string;
+  price: string | number;
+};
+
+type ProductPreviewDrawerProps = {
+  product: Product;
+};
+
+export default function ProductPreviewDrawer({
+  product,
+}: ProductPreviewDrawerProps): JSX.Element {
   const close = useProductStore((s) => s.closePreview);
 
   return (
@@ -12,7 +26,9 @@ export default function ProductPreviewDrawer({ product }) {
       />
 
       <Card sectioned>
-        <Text variant="headingLg">{product.title}</Text>
+        <Text variant="headingLg" as="h2">
+          {product.title}
+        </Text>
         <Text>ID: {product.id}</Text>
         <Text>Vendor: {product.vendor}</Text>
         <Text>Price: {product.price}</Text>

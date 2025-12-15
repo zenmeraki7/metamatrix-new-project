@@ -12,6 +12,7 @@
     "deploy": "shopify app deploy"
   },
   "dependencies": {
+    "@shopify/polaris": "^13.9.5",
     "@tanstack/react-virtual": "^3.13.13",
     "zustand": "^5.0.9"
   },

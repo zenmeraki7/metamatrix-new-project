@@ -19,7 +19,7 @@ export const FieldSection = memo(function FieldSection({
   if (!fields || fields.length === 0) return null;
 
   return (
-    <Box paddingBlock="400" paddingInline="400">
+    <Box paddingBlock="400" paddingStack="400">
       <Text variant="headingSm" as="h3">
         {title}
       </Text>

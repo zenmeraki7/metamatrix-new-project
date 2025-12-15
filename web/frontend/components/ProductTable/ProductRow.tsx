@@ -1,128 +1,89 @@
-// import { memo } from "react";
-// import { InlineStack, Thumbnail, Text, Badge, Box } from "@shopify/polaris";
-// import { useProductById } from "../../stores/productStore";
+// web/frontend/src/components/ProductRow.tsx
+import { memo, useCallback } from "react";
+import {
+  Checkbox,
+  Stack,
+  Thumbnail,
+  Text,
+  Badge,
+} from "@shopify/polaris";
 
-// interface Props {
-//   id: string;
-//   style: React.CSSProperties; // REQUIRED for virtualization
-// }
+import { useSelectionStore } from "../../state/selectionStore";
+import type { ProductSummary } from "../../types/product";
 
-// const areEqual = (prev: Props, next: Props): boolean => {
-//   return (
-//     prev.id === next.id &&
-//     prev.style.transform === next.style.transform &&
-//     prev.style.height === next.style.height
-//   );
-// };
+/* ------------------------------------------------------------------ */
+/* Props                                                              */
+/* ------------------------------------------------------------------ */
 
-// export const ProductRow = memo(function ProductRow({ id, style }: Props) {
-//   const product = useProductById(id);
-//   if (!product) return null;
+interface ProductRowProps {
+  product: ProductSummary;
+}
 
-//   return (
-//     <Box
-//       style={{
-//         ...style,
-//         backfaceVisibility: "hidden",
-//       }}
-//       paddingBlock="200"
-//       paddingInline="300"
-//       borderBlockEndWidth="025"
-//       borderColor="border"
-//       background="bg-surface"
-//     >
-//       <InlineStack gap="400" blockAlign="center" wrap={false}>
-//         <Box style={{ width: "48px", flexShrink: 0 }}>
-//           <Thumbnail
-//             source={product.imageUrl ?? undefined}
-//             alt={product.title}
-//             size="small"
-//           />
-//         </Box>
+/* ------------------------------------------------------------------ */
+/* Component                                                          */
+/* ------------------------------------------------------------------ */
 
-//         <Box style={{ flex: 2, minWidth: "200px", overflow: "hidden" }}>
-//           <Text as="span" truncate>
-//             {product.title}
-//           </Text>
-//         </Box>
+export const ProductRow = memo(
+  function ProductRow({
+    product,
+  }: ProductRowProps): JSX.Element {
+    const checked = useSelectionStore(
+      state =>
+        state.mode === "all" ||
+        state.selectedIds.has(product.id)
+    );
 
-//         <Box style={{ width: "120px", flexShrink: 0 }}>
-//           <Badge
-//             tone={
-//               product.status === "active"
-//                 ? "success"
-//                 : product.status === "draft"
-//                 ? "attention"
-//                 : undefined
-//             }
-//           >
-//             {product.status}
-//           </Badge>
-//         </Box>
+    const { selectOne, deselectOne } =
+      useSelectionStore(state => ({
+        selectOne: state.selectOne,
+        deselectOne: state.deselectOne,
+      }));
 
-//         <Box style={{ flex: 1, minWidth: "120px", overflow: "hidden" }}>
-//           <Text as="span" truncate>
-//             {product.vendor || "—"}
-//           </Text>
-//         </Box>
-//       </InlineStack>
-//     </Box>
-//   );
-// }, areEqual);
+    const handleToggle = useCallback(
+      (value: boolean) => {
+        value
+          ? selectOne(product.id)
+          : deselectOne(product.id);
+      },
+      [product.id, selectOne, deselectOne]
+    );
 
-
-// web/frontend/components/ProductTable/ProductRow.tsx 
-import { memo } from "react"; 
-import { InlineStack, Thumbnail, Text, Badge, Box } 
-from "@shopify/polaris"; 
-import { useProductById } from "../../stores/productStore"; 
-
-interface Props 
-{ id: string; 
-  style: React.CSSProperties; //  REQUIRED for virtualization 
-  } 
-   /** * Custom equality: * - Same product ID * - Same virtual position */
-
-   const areEqual = (prev: Props, next: Props): boolean => { 
     return (
-       prev.id === next.id && 
-       prev.style.transform === next.style.transform && 
-       prev.style.height === next.style.height 
-      );
-     }; 
-     export const ProductRow = memo(function ProductRow({ id, style }: Props) { 
-      const product = useProductById(id); 
-      if (!product) return null; 
-      return ( 
-      <Box 
-      style={{ 
-        ...style, 
-        backfaceVisibility: "hidden", 
-      }} 
-      paddingBlock="200" 
-      paddingInline="300" 
-      borderBlockEndWidth="025" 
-      borderColor="border" 
-      background="bg-surface" >
+      <Stack
+        align="center"
+        gap="400"
+        style={{
+          height: 72,
+          overflow: "hidden",
+        }}
+      >
+        <Checkbox
+          checked={checked}
+          onChange={handleToggle}
+        />
 
-      <InlineStack gap="400" 
-      blockAlign="center" wrap={false}> 
-        {/* Image */} 
-        <Box style={{ width: "48px", flexShrink: 0 }}> 
-          <Thumbnail source={product.imageUrl ?? undefined} alt={product.title} size="small" /> 
-          </Box> 
-          {/* Title */} 
-          <Box style={{ flex: 2, minWidth: "200px", overflow: "hidden" }}> 
-            <Text as="span" truncate> {product.title} </Text> 
-          </Box> 
-          {/* Status */} 
-          <Box style={{ width: "120px", flexShrink: 0 }}>
-             <Badge tone={ product.status === "active" ? "success" : product.status === "draft" ? "attention" : undefined } > 
-              {product.status} </Badge> 
-             </Box> 
-          {/* Vendor */} 
-          <Box style={{ flex: 1, minWidth: "120px", overflow: "hidden" }}> 
-            <Text as="span" truncate> {product.vendor || "—"} </Text> 
-            </Box> 
-            </InlineStack> 
-            </Box> ); }, areEqual);
+        <Thumbnail
+          source={product.featuredImage?.url}
+          alt={product.featuredImage?.altText ?? ""}
+          size="small"
+        />
+
+        <Text
+          fontWeight="semibold"
+          truncate
+        >
+          {product.title}
+        </Text>
+
+        <Badge>{product.status}</Badge>
+
+        <Text
+          tone="subdued"
+          truncate
+        >
+          {product.vendor}
+        </Text>
+      </Stack>
+    );
+  }
+);

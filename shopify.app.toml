@@ -2,7 +2,7 @@
 
 client_id = "d1fcc7b7acd56e14a84d71913af3ad7f"
 name = "meta-maTrix"
-application_url = "https://banner-cultures-institutional-desire.trycloudflare.com"
+application_url = "https://minolta-current-innocent-holmes.trycloudflare.com"
 embedded = true
 
 [build]
@@ -16,4 +16,4 @@ api_version = "2026-01"
 scopes = "write_products"
 
 [auth]
-redirect_urls = [ "https://banner-cultures-institutional-desire.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://minolta-current-innocent-holmes.trycloudflare.com/api/auth" ]

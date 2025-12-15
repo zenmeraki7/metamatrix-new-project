@@ -4,7 +4,7 @@ import { memo } from "react";
 import {
   Card,
   Box,
-  InlineStack,
+  Stack,
   Button,
   Text,
   Icon,
@@ -28,13 +28,13 @@ export const FilterBuilder = memo(function FilterBuilder() {
   return (
     <Card padding="400">
       {/* Header */}
-      <InlineStack align="space-between" blockAlign="center">
-        <InlineStack gap="200" blockAlign="center">
+      <Stack align="space-between" blockAlign="center">
+        <Stack gap="200" blockAlign="center">
           <Icon source={FilterIcon} />
           <Text as="h2" variant="headingSm">
             Filters
           </Text>
-        </InlineStack>
+        </Stack>
 
         {hasActiveFilters && (
           <Button
@@ -45,7 +45,7 @@ export const FilterBuilder = memo(function FilterBuilder() {
             Clear all
           </Button>
         )}
-      </InlineStack>
+      </Stack>
 
       {/* Groups */}
       <Box paddingBlockStart="400">
@@ -57,7 +57,7 @@ export const FilterBuilder = memo(function FilterBuilder() {
               </Box>
             )}
 
-            <InlineStack gap="200" wrap>
+            <Stack gap="200" wrap>
               {group.rules.map((rule, ruleIndex) => (
                 <FilterRule
                   key={rule.id}
@@ -74,7 +74,7 @@ export const FilterBuilder = memo(function FilterBuilder() {
               >
                 And
               </Button>
-            </InlineStack>
+            </Stack>
           </Box>
         ))}
       </Box>

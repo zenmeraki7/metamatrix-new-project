@@ -7,13 +7,13 @@ type Product = {
   title: string;
 };
 
-type InlineTitleEditorProps = {
+type StackTitleEditorProps = {
   product: Product;
 };
 
-export default function InlineTitleEditor({
+export default function StackTitleEditor({
   product,
-}: InlineTitleEditorProps): JSX.Element {
+}: StackTitleEditorProps): JSX.Element {
   const update = useProductStore((s) => s.updateProductTitle);
 
   const handleChange = (value: string): void => {

@@ -2,7 +2,7 @@ import { memo, useState, useCallback } from "react";
 import {
   Box,
   Card,
-  InlineStack,
+  Stack,
   Button,
   Text,
   Popover,
@@ -96,8 +96,8 @@ export const BulkActionBar = memo(function BulkActionBar() {
       }}
     >
       <Card padding="400">
-        <InlineStack align="space-between" blockAlign="center">
-          <InlineStack gap="300" blockAlign="center">
+        <Stack align="space-between" blockAlign="center">
+          <Stack gap="300" blockAlign="center">
             <Box
               background="bg-surface-active"
               padding="200"
@@ -110,9 +110,9 @@ export const BulkActionBar = memo(function BulkActionBar() {
             <Text as="span" tone="subdued">
               selected
             </Text>
-          </InlineStack>
+          </Stack>
 
-          <InlineStack gap="200">
+          <Stack gap="200">
             <Button
               variant="tertiary"
               onClick={clearSelection}
@@ -164,8 +164,8 @@ export const BulkActionBar = memo(function BulkActionBar() {
                 ]}
               />
             </Popover>
-          </InlineStack>
-        </InlineStack>
+          </Stack>
+        </Stack>
       </Card>
     </div>
   );

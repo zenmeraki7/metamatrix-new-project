@@ -77,7 +77,7 @@ import {
   Box,
   Select,
   TextField,
-  InlineStack,
+  Stack,
 } from "@shopify/polaris";
 
 import { useFilterStore } from "../../stores/filterStore";
@@ -143,7 +143,7 @@ export const FilterRule = memo(function FilterRule({
       sectioned
     >
       <Box minWidth="280px">
-        <InlineStack gap="300" wrap>
+        <Stack gap="300" wrap>
           <Select
             label="Operator"
             labelHidden
@@ -170,7 +170,7 @@ export const FilterRule = memo(function FilterRule({
             }
             autoComplete="off"
           />
-        </InlineStack>
+        </Stack>
       </Box>
     </Popover>
   );

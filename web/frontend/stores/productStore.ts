@@ -60,7 +60,7 @@ export const useProductStore = create(
         }
       }),
 
-    /* ---------------- INLINE UPDATE ---------------- */
+    /* ---------------- Stack UPDATE ---------------- */
 
     updateField: (id, field, value) =>
       set((state) => {

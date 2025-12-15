@@ -41,28 +41,26 @@ export const ProductsTopBar = memo(function ProductsTopBar({
 }: ProductsTopBarProps): JSX.Element {
 
     return (
-      <Stack
-        align="space-between"
-        gap="400"
-        wrap={false}
-      >
-        <div style={SEARCH_CONTAINER_STYLE}>
-          <TextField
-            value={searchValue}
-            onChange={onSearchChange}
-            placeholder="Search products"
-            autoComplete="off"
-            // prefix={searchIcon}
-          />
-        </div>
+<Stack
+  align="space-between"
+  wrap={false} // keeps items on one row
+>
+  <div style={{ flex: 1, marginRight: 8 }}> 
+    {/* Makes search bar take remaining space */}
+    <TextField
+      value={searchValue}
+      onChange={onSearchChange}
+      placeholder="Search products"
+      autoComplete="off"
+      // prefix={searchIcon}
+    />
+  </div>
 
-        <Button
-        //   icon={FilterIcon}
-          onClick={onFilterClick}
-        >
-          Filter
-        </Button>
-      </Stack>
+  <Button onClick={onFilterClick}>
+    Filter
+  </Button>
+</Stack>
+
     );
   }
 );

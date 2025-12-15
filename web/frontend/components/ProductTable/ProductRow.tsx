@@ -1,89 +1,46 @@
-// web/frontend/src/components/ProductRow.tsx
-import { memo, useCallback } from "react";
-import {
-  Checkbox,
-  Stack,
-  Thumbnail,
-  Text,
-  Badge,
-} from "@shopify/polaris";
-
-import { useSelectionStore } from "../../state/selectionStore";
+// web/frontend/src/components/ProductTable/ProductRow.tsx
+import { memo } from "react";
+import { Stack, Thumbnail, Text, Badge } from "@shopify/polaris";
 import type { ProductSummary } from "../../types/product";
-
-/* ------------------------------------------------------------------ */
-/* Props                                                              */
-/* ------------------------------------------------------------------ */
 
 interface ProductRowProps {
   product: ProductSummary;
 }
 
-/* ------------------------------------------------------------------ */
-/* Component                                                          */
-/* ------------------------------------------------------------------ */
+export const ProductRow = memo(({ product }: ProductRowProps) => {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "60px 2fr 1fr 1fr 1fr",
+        alignItems: "center",
+        padding: "10px 15px",
+        borderBottom: "1px solid #eee",
+        gap: "10px",
+      }}
+    >
+      {/* Thumbnail */}
+      <Thumbnail
+        source={product.featuredImageUrl || "/placeholder.png"}
+        alt={product.title}
+        size="small"
+      />
 
-export const ProductRow = memo(
-  function ProductRow({
-    product,
-  }: ProductRowProps): JSX.Element {
-    const checked = useSelectionStore(
-      state =>
-        state.mode === "all" ||
-        state.selectedIds.has(product.id)
-    );
+      {/* Title */}
+      <Text variant="bodyMd" fontWeight="medium">
+        {product.title}
+      </Text>
 
-    const { selectOne, deselectOne } =
-      useSelectionStore(state => ({
-        selectOne: state.selectOne,
-        deselectOne: state.deselectOne,
-      }));
+      {/* Price */}
+      <Text variant="bodyMd">${product.price}</Text>
 
-    const handleToggle = useCallback(
-      (value: boolean) => {
-        value
-          ? selectOne(product.id)
-          : deselectOne(product.id);
-      },
-      [product.id, selectOne, deselectOne]
-    );
+      {/* Vendor */}
+      <Text variant="bodyMd">{product.vendor || "-"}</Text>
 
-    return (
-      <Stack
-        align="center"
-        gap="400"
-        style={{
-          height: 72,
-          overflow: "hidden",
-        }}
-      >
-        <Checkbox
-          checked={checked}
-          onChange={handleToggle}
-        />
-
-        <Thumbnail
-          source={product.featuredImage?.url}
-          alt={product.featuredImage?.altText ?? ""}
-          size="small"
-        />
-
-        <Text
-          fontWeight="semibold"
-          truncate
-        >
-          {product.title}
-        </Text>
-
-        <Badge>{product.status}</Badge>
-
-        <Text
-          tone="subdued"
-          truncate
-        >
-          {product.vendor}
-        </Text>
-      </Stack>
-    );
-  }
-);
+      {/* Status / Badge */}
+      <Badge status={product.available ? "success" : "critical"}>
+        {product.available ? "Available" : "Out of stock"}
+      </Badge>
+    </div>
+  );
+});

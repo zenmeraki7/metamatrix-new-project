@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Card, Box } from "@shopify/polaris";
 import { useProductStore } from "../../state/productStore";
-import ProductRow from "../ProductTable/ProductRow";
+import {ProductRow} from "../ProductTable/ProductRow";
 
 export default function VirtualProductTable(): JSX.Element {
   const parentRef = useRef<HTMLDivElement | null>(null);

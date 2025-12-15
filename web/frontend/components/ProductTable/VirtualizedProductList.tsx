@@ -8,7 +8,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { ProductRow } from "./ProductRow";
-import type { ProductSummary } from "../../../types/product";
+import type { ProductSummary } from "../../types/product";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -101,45 +101,59 @@ export const VirtualizedProductList = memo(
     /* -------------------------------------------------------------- */
 
     return (
-      <div
-        ref={parentRef}
-        style={{
-          height: CONTAINER_HEIGHT,
-          overflow: "auto",
-        }}
-      >
-        <div
-          style={{
-            height: rowVirtualizer.getTotalSize(),
-            position: "relative",
-          }}
-        >
-          {rowVirtualizer
-            .getVirtualItems()
-            .map(virtualRow => {
-              const product =
-                products[virtualRow.index];
+  <div>
+  {/* Table Header */}
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "60px 2fr 1fr 1fr 1fr",
+      padding: "10px 15px",
+      fontWeight: 600,
+      borderBottom: "2px solid #ccc",
+      backgroundColor: "#f9f9f9",
+    }}
+  >
+    <span>Image</span>
+    <span>Product</span>
+    <span>Price</span>
+    <span>Vendor</span>
+    <span>Status</span>
+  </div>
 
-              if (!product) return null;
+  {/* Virtualized Rows */}
+  <div
+    ref={parentRef}
+    style={{ height: CONTAINER_HEIGHT, overflow: "auto" }}
+  >
+    <div
+      style={{
+        height: rowVirtualizer.getTotalSize(),
+        position: "relative",
+      }}
+    >
+      {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+        const product = products[virtualRow.index];
+        if (!product) return null;
+        return (
+          <div
+            key={product.id}
+            ref={rowVirtualizer.measureElement}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              transform: `translateY(${virtualRow.start}px)`,
+            }}
+          >
+            <ProductRow product={product} />
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</div>
 
-              return (
-                <div
-                  key={product.id}
-                  ref={rowVirtualizer.measureElement}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  <ProductRow product={product} />
-                </div>
-              );
-            })}
-        </div>
-      </div>
     );
   }
 );

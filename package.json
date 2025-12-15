@@ -12,8 +12,11 @@
     "deploy": "shopify app deploy"
   },
   "dependencies": {
-    "@shopify/polaris": "^13.9.5",
+    "@shopify/polaris": "^12.27.0",
     "@tanstack/react-virtual": "^3.13.13",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "node-fetch": "^3.3.2",
     "zustand": "^5.0.9"
   },
   "author": "DELL",
@@ -22,5 +25,8 @@
     "extensions/*",
     "web",
     "web/frontend"
-  ]
+  ],
+  "devDependencies": {
+    "@types/express": "^5.0.6"
+  }
 }

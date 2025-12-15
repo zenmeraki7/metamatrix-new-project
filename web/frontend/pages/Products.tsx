@@ -12,6 +12,7 @@ import { ProductsTopBar } from "../components/ProductTable/ProductsTopBar";
 import { ProductsPagination } from "../components/ProductTable/ProductsPagination";
 import { FiltersModal } from "../components/filters/FilterModal";
 
+
 /* ------------------------------------------------------------------ */
 /* Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -54,40 +55,53 @@ const Products = memo(function Products(): JSX.Element {
 
   return (
     <Page title="Products">
-      <Stack gap="400">
-        <Card>
-          <ProductsTopBar
-            searchValue={search}
-            onSearchChange={handleSearchChange}
-            onFilterClick={handleFilterClick}
-          />
-        </Card>
-
-        <Card padding="0">
-          <VirtualizedProductList
-            products={products}
-            loading={isLoading}
-          />
-        </Card>
-
-        <Card>
-          <ProductsPagination
-            pageInfo={pageInfo}
-            onNext={loadNext}
-            onPrev={loadPrev}
-          />
-        </Card>
-      </Stack>
-
-      <FiltersModal
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        onApply={(rules) => {
-          console.log("Filters:", rules);
-          setFilterOpen(false);
-        }}
+  <Stack vertical spacing="extraLoose"> 
+    {/* Top Bar */}
+    <Card>
+      <ProductsTopBar
+        searchValue={search}
+        onSearchChange={handleSearchChange}
+        onFilterClick={handleFilterClick}
       />
-    </Page>
+    </Card>
+
+    {/* Product List */}
+    <Card padding="0">
+      {products.length > 0 ? (
+        <VirtualizedProductList
+          products={products}
+          loading={isLoading}
+          onLoadMore={loadNext}
+        />
+      ) : (
+        <div style={{ padding: 20 }}>
+          {isLoading ? "Loading products..." : "No products found"}
+        </div>
+      )}
+    </Card>
+
+    {/* Pagination */}
+    <Card>
+      <ProductsPagination
+        pageInfo={pageInfo}
+        onNext={loadNext}
+        onPrev={loadPrev}
+      />
+    </Card>
+  </Stack>
+
+  {/* Filters Modal */}
+  <FiltersModal
+    open={filterOpen}
+    executionPhase="search"
+    onClose={() => setFilterOpen(false)}
+    onApply={(rules) => {
+      console.log("Filters:", rules);
+      setFilterOpen(false);
+    }}
+  />
+</Page>
+
   );
 });
 

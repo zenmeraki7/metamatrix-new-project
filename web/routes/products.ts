@@ -1,7 +1,7 @@
 // web/routes/products.ts
 import express, { Request, Response } from "express";
 import { shopifyGraphQL } from "../services/shopify/graphqlClient";
-import { productsCache } from "../services/cache/productsCache";
+import { productsCache } from "../services/cache/lru";
 import { PRODUCTS_QUERY } from "./products.query";
 import type { ProductSummary } from "../types/product";
 

@@ -17,6 +17,7 @@ const billingConfig = {
 };
 
 const shopify = shopifyApp({
+  // appUrl: process.env.SHOPIFY_APP_URL,
   api: {
     apiVersion: LATEST_API_VERSION,
     restResources,
@@ -36,6 +37,9 @@ const shopify = shopifyApp({
   },
   // This should be replaced with your preferred storage strategy
   sessionStorage: new SQLiteSessionStorage(DB_PATH),
+   future: {
+    unstable_newEmbeddedAuthStrategy: true, // ✅ REQUIRED
+  },
 });
 
 export default shopify;

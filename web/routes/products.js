@@ -1,39 +1,19 @@
-// web/routes/products.ts
-import express, { Request, Response } from "express";
-import { shopifyGraphQL } from "../services/shopify/graphqlClient";
-import { productsCache } from "../services/cache/lru";
-import { PRODUCTS_QUERY } from "./products.query";
-import type { ProductSummary } from "../types/product";
+// web/routes/products.js
+import express from "express";
+import shopify from "../shopify.js"; //
+import { shopifyGraphQL } from "../services/shopify/graphqlClient.js";
+import { productsCache } from "../services/cache/lru.js";
+import { PRODUCTS_QUERY } from "../services/shopify/products/products.query.js";
 
 const router = express.Router();
-const PAGE_SIZE = 50 as const;
+const PAGE_SIZE = 50; // ✅ JS-safe
 
-type Direction = "next" | "prev";
+router.get(
+  "/",
+  shopify.validateAuthenticatedSession(),
+  async (req, res) => {
+    const { shop, accessToken, scopes } = res.locals.shopify;
 
-interface ProductsQueryVars {
-  first?: number | null;
-  last?: number | null;
-  after?: string | null;
-  before?: string | null;
-}
-
-interface ProductsQueryResponse {
-  products: {
-    edges: {
-      cursor: string;
-      node: ProductSummary;
-    }[];
-    pageInfo: {
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-      startCursor: string | null;
-      endCursor: string | null;
-    };
-  };
-}
-
-router.get("/", async (req: Request, res: Response) => {
-  const { shop, accessToken, scopes } = res.locals.shopify;
 
   if (!shop || !accessToken) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -49,8 +29,7 @@ router.get("/", async (req: Request, res: Response) => {
       .json({ error: "Filters not allowed on browse endpoint" });
   }
 
-  const direction =
-    (req.query.direction as Direction) ?? "next";
+  const direction = req.query.direction ?? "next";
   const cursor =
     typeof req.query.cursor === "string"
       ? req.query.cursor
@@ -58,7 +37,7 @@ router.get("/", async (req: Request, res: Response) => {
 
   const isPrev = direction === "prev";
 
-  const variables: ProductsQueryVars = {
+  const variables = {
     first: isPrev ? null : PAGE_SIZE,
     last: isPrev ? PAGE_SIZE : null,
     after: !isPrev ? cursor : null,
@@ -70,10 +49,7 @@ router.get("/", async (req: Request, res: Response) => {
   if (cached) return res.json(cached);
 
   try {
-    const data = await shopifyGraphQL<
-      ProductsQueryResponse,
-      ProductsQueryVars
-    >({
+    const data = await shopifyGraphQL({
       ctx: {
         jobId: "browse:products",
         shop,
@@ -85,10 +61,7 @@ router.get("/", async (req: Request, res: Response) => {
     });
 
     const edges = data.products.edges;
-
-    const normalizedEdges = isPrev
-      ? [...edges].reverse()
-      : edges;
+    const normalizedEdges = isPrev ? [...edges].reverse() : edges;
 
     const response = {
       products: normalizedEdges.map(e => ({

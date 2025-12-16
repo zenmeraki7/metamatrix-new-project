@@ -8,7 +8,7 @@ import {
 } from "../stores/productStore";
 import { useFilterGroups } from "../stores/filterStore";
 import { FilterSerializer } from "../utils/FilterSerializer";
-import type { ProductsResponse } from "../types/product";
+import {ProductsResponse}  from "../types/product";
 
 /* ------------------------------------------------------------------ */
 /* API CLIENT */

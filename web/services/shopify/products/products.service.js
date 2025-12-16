@@ -1,10 +1,5 @@
-interface FetchProductsParams {
-  ctx: ShopifyJobContext;
-  limit: number;
-  direction: "next" | "prev";
-  cursor?: string;
-  search?: string;
-}
+import { shopifyGraphQL } from "../services/shopify/graphqlClient.js";
+import { PRODUCTS_QUERY } from "../routes/products.query.js";
 
 export async function fetchProducts({
   ctx,
@@ -12,29 +7,18 @@ export async function fetchProducts({
   direction,
   cursor,
   search,
-}: FetchProductsParams) {
+}) {
   const isNext = direction === "next";
 
-  const data = await shopifyGraphQL<
-    ShopifyProductsQuery,
-    {
-      first?: number;
-      last?: number;
-      after?: string;
-      before?: string;
-      query?: string;
-    }
-  >({
+  const data = await shopifyGraphQL({
     ctx,
     query: PRODUCTS_QUERY,
     variables: {
       first: isNext ? limit : undefined,
       last: !isNext ? limit : undefined,
-      after: isNext ? cursor ?? undefined : undefined,
-      before: !isNext ? cursor ?? undefined : undefined,
-      query: search
-        ? `title:*${search}*`
-        : undefined,
+      after: isNext ? (cursor ?? undefined) : undefined,
+      before: !isNext ? (cursor ?? undefined) : undefined,
+      query: search ? `title:*${search}*` : undefined,
     },
   });
 

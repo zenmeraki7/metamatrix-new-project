@@ -12,6 +12,8 @@
     "deploy": "shopify app deploy"
   },
   "dependencies": {
+    "@shopify/app-bridge-react": "^4.2.8",
+    "@shopify/app-bridge-utils": "^3.5.1",
     "@shopify/polaris": "^12.27.0",
     "@tanstack/react-virtual": "^3.13.13",
     "dotenv": "^17.2.3",

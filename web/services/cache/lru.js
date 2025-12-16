@@ -1,54 +1,29 @@
-// web/services/cache/lru.ts
-/* ------------------------------------------------------------------ */
-/* Types                                                              */
-/* ------------------------------------------------------------------ */
-
-interface LRUNode<T> {
-  key: string;
-  value: T;
-  expiresAt: number;
-  prev: LRUNode<T> | null;
-  next: LRUNode<T> | null;
-}
-
-export interface LRUOptions {
-  capacity: number;
-  ttlMs: number;
-  namespace: string;
-  maxPrunePerSet?: number;
-}
-
 /* ------------------------------------------------------------------ */
 /* LRU Cache                                                          */
 /* ------------------------------------------------------------------ */
 
-export class LRUCache<T> {
-  private readonly capacity: number;
-  private readonly ttlMs: number;
-  private readonly namespace: string;
-  private readonly maxPrunePerSet: number;
-
-  private readonly map = new Map<string, LRUNode<T>>();
-  private head: LRUNode<T> | null = null;
-  private tail: LRUNode<T> | null = null;
-
+class LRUCache {
   constructor({
     capacity,
     ttlMs,
     namespace,
     maxPrunePerSet = 2,
-  }: LRUOptions) {
+  }) {
     this.capacity = capacity;
     this.ttlMs = ttlMs;
     this.namespace = namespace;
     this.maxPrunePerSet = maxPrunePerSet;
+
+    this.map = new Map();
+    this.head = null;
+    this.tail = null;
   }
 
   /* ------------------------------------------------------------------ */
   /* Public API                                                         */
   /* ------------------------------------------------------------------ */
 
-  get(key: string): T | null {
+  get(key) {
     const namespacedKey = this.ns(key);
     const node = this.map.get(namespacedKey);
     if (!node) return null;
@@ -62,7 +37,7 @@ export class LRUCache<T> {
     return node.value;
   }
 
-  set(key: string, value: T): void {
+  set(key, value) {
     const namespacedKey = this.ns(key);
 
     this.pruneExpiredIncremental();
@@ -75,7 +50,7 @@ export class LRUCache<T> {
       return;
     }
 
-    const node: LRUNode<T> = {
+    const node = {
       key: namespacedKey,
       value,
       expiresAt: Date.now() + this.ttlMs,
@@ -91,13 +66,13 @@ export class LRUCache<T> {
     }
   }
 
-  invalidate(key: string): void {
+  invalidate(key) {
     const namespacedKey = this.ns(key);
     const node = this.map.get(namespacedKey);
     if (node) this.remove(node);
   }
 
-  invalidatePrefix(prefix: string): void {
+  invalidatePrefix(prefix) {
     const namespacedPrefix = this.ns(prefix);
     for (const [key, node] of this.map) {
       if (key.startsWith(namespacedPrefix)) {
@@ -110,15 +85,15 @@ export class LRUCache<T> {
   /* Internal Helpers                                                   */
   /* ------------------------------------------------------------------ */
 
-  private ns(key: string): string {
+  ns(key) {
     return `${this.namespace}:${key}`;
   }
 
-  private isExpired(node: LRUNode<T>): boolean {
+  isExpired(node) {
     return node.expiresAt <= Date.now();
   }
 
-  private pruneExpiredIncremental(): void {
+  pruneExpiredIncremental() {
     let pruned = 0;
     let cursor = this.tail;
 
@@ -132,7 +107,7 @@ export class LRUCache<T> {
     }
   }
 
-  private addToFront(node: LRUNode<T>): void {
+  addToFront(node) {
     node.next = this.head;
     node.prev = null;
 
@@ -144,13 +119,13 @@ export class LRUCache<T> {
     }
   }
 
-  private moveToFront(node: LRUNode<T>): void {
+  moveToFront(node) {
     if (node === this.head) return;
     this.remove(node);
     this.addToFront(node);
   }
 
-  private remove(node: LRUNode<T>): void {
+  remove(node) {
     if (node.prev) node.prev.next = node.next;
     if (node.next) node.next.prev = node.prev;
 
@@ -160,8 +135,20 @@ export class LRUCache<T> {
     this.map.delete(node.key);
   }
 
-  private evictLRU(): void {
+  evictLRU() {
     if (!this.tail) return;
     this.remove(this.tail);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Shared Instance (example export)                                    */
+/* ------------------------------------------------------------------ */
+
+export const productsCache = new LRUCache({
+  capacity: 500,
+  ttlMs: 30_000,
+  namespace: "products",
+});
+
+export { LRUCache };

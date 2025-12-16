@@ -1,65 +1,15 @@
-// web/services/shopify/graphqlClient.ts
-import fetch, { RequestInit } from "node-fetch";
-
-/* ------------------------------------------------------------------ */
-/* Types                                                              */
-/* ------------------------------------------------------------------ */
-
-export interface ShopifyJobContext {
-  jobId: string;
-  shop: string;
-  accessToken: string;
-  maxRetries: number;
-}
-
-export interface ShopifyGraphQLParams<TVariables = unknown> {
-  ctx: ShopifyJobContext;
-  query: string;
-  variables?: TVariables;
-}
-
-export interface ShopifyGraphQLError {
-  message: string;
-  locations?: { line: number; column: number }[];
-  path?: string[];
-  extensions?: {
-    code?: string;
-    [key: string]: unknown;
-  };
-}
-
-export interface ShopifyGraphQLCost {
-  requestedQueryCost: number;
-  actualQueryCost: number;
-  throttleStatus: {
-    currentlyAvailable: number;
-    restoreRate: number;
-  };
-}
-
-export interface ShopifyGraphQLResponse<TData> {
-  data?: TData;
-  errors?: ShopifyGraphQLError[];
-  extensions?: {
-    cost?: ShopifyGraphQLCost;
-  };
-}
-
-export interface NormalizedShopifyError {
-  jobId: string;
-  type: "THROTTLED" | "GRAPHQL" | "NETWORK";
-  errors?: ShopifyGraphQLError[];
-  cost?: ShopifyGraphQLCost;
-}
+// web/services/shopify/graphqlClient.js
+import fetch from "node-fetch";
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                          */
 /* ------------------------------------------------------------------ */
 
 const SHOPIFY_API_VERSION = "2024-10";
+
 const JSON_HEADERS = {
   "Content-Type": "application/json",
-} as const;
+};
 
 const BASE_BACKOFF_MS = 250;
 const MAX_BACKOFF_MS = 5_000;
@@ -68,14 +18,14 @@ const MAX_BACKOFF_MS = 5_000;
 /* Guards                                                             */
 /* ------------------------------------------------------------------ */
 
-function assertWorkerContext(ctx: ShopifyJobContext): void {
+function assertWorkerContext(ctx) {
   if (!ctx?.jobId) {
     throw new Error("GraphQL client requires job context");
   }
 }
 
-function assertValidShop(shop: string): void {
-  if (!shop.endsWith(".myshopify.com")) {
+function assertValidShop(shop) {
+  if (!shop?.endsWith(".myshopify.com")) {
     throw new Error("Invalid shop domain");
   }
 }
@@ -84,11 +34,11 @@ function assertValidShop(shop: string): void {
 /* Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function sleep(ms: number): Promise<void> {
+function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function backoff(attempt: number): number {
+function backoff(attempt) {
   const exp = Math.min(
     MAX_BACKOFF_MS,
     BASE_BACKOFF_MS * 2 ** attempt
@@ -96,32 +46,24 @@ function backoff(attempt: number): number {
   return exp + Math.floor(Math.random() * 100);
 }
 
-function normalizeError(
-  ctx: ShopifyJobContext,
-  type: NormalizedShopifyError["type"],
-  errors?: ShopifyGraphQLError[],
-  cost?: ShopifyGraphQLCost
-): NormalizedShopifyError {
+function normalizeError(ctx, type, errors, cost) {
   return {
     jobId: ctx.jobId,
-    type,
+    type, // "THROTTLED" | "GRAPHQL" | "NETWORK"
     errors,
     cost,
   };
 }
 
 /* ------------------------------------------------------------------ */
-/* GraphQL Executor (Worker-only, Cost-aware, Retry-safe)             */
+/* GraphQL Executor (Cost-aware, Retry-safe)                           */
 /* ------------------------------------------------------------------ */
 
-export async function shopifyGraphQL<
-  TData,
-  TVariables = Record<string, unknown>
->({
+export async function shopifyGraphQL({
   ctx,
   query,
   variables,
-}: ShopifyGraphQLParams<TVariables>): Promise<TData> {
+}) {
   assertWorkerContext(ctx);
   assertValidShop(ctx.shop);
 
@@ -147,7 +89,7 @@ export async function shopifyGraphQL<
           },
           body: JSON.stringify({ query, variables }),
           signal: controller.signal,
-        } satisfies RequestInit
+        }
       );
     } catch {
       clearTimeout(timeout);
@@ -162,14 +104,12 @@ export async function shopifyGraphQL<
 
     clearTimeout(timeout);
 
-    const json =
-      (await response.json()) as ShopifyGraphQLResponse<TData>;
-
+    const json = await response.json();
     const cost = json.extensions?.cost;
 
     if (
       response.status === 429 ||
-      cost?.throttleStatus.currentlyAvailable === 0
+      cost?.throttleStatus?.currentlyAvailable === 0
     ) {
       if (attempt >= ctx.maxRetries) {
         throw normalizeError(

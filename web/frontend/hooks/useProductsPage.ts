@@ -29,7 +29,10 @@ export function useProductsPage() {
     if (cursor) params.set("cursor", cursor);
 
     try {
-      const res = await fetch(`/api/products?${params.toString()}`);
+      const res = await fetch(`/api/products?${params.toString()}`, {
+  credentials: "include",
+});
+
       if (!res.ok) throw new Error("Failed to fetch");
 
       const data: ProductsResponse = await res.json();

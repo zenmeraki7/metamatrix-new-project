@@ -2,7 +2,7 @@
 
 client_id = "d1fcc7b7acd56e14a84d71913af3ad7f"
 name = "meta-maTrix"
-application_url = "https://div-database-foreign-sterling.trycloudflare.com"
+application_url = "https://luis-joke-vendor-franklin.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,7 +13,7 @@ api_version = "2026-01"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "read_products,write_products"
 
 [auth]
-redirect_urls = [ "https://div-database-foreign-sterling.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://luis-joke-vendor-franklin.trycloudflare.com/api/auth" ]

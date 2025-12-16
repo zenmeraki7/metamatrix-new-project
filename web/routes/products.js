@@ -1,40 +1,32 @@
-// web/routes/products.js
 import express from "express";
-import shopify from "../shopify.js"; //
 import { shopifyGraphQL } from "../services/shopify/graphqlClient.js";
 import { productsCache } from "../services/cache/lru.js";
 import { PRODUCTS_QUERY } from "../services/shopify/products/products.query.js";
 
 const router = express.Router();
-const PAGE_SIZE = 50; // ✅ JS-safe
+const PAGE_SIZE = 50;
 
-router.get(
-  "/",
-  shopify.validateAuthenticatedSession(),
-  async (req, res) => {
-    const { shop, accessToken, scopes } = res.locals.shopify;
-
-
-  if (!shop || !accessToken) {
+router.get("/", async (req, res) => {
+  // Session already validated by app.use("/api", shopify.validateAuthenticatedSession())
+  const session = res.locals.shopify?.session;
+  
+  if (!session?.shop || !session?.accessToken) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  if (!scopes?.includes("read_products")) {
-    return res.status(403).json({ error: "Insufficient scope" });
-  }
+  const { shop, accessToken } = session;
+
+  // // Check scopes if needed
+  // if (!session.scope?.includes("read_products")) {
+  //   return res.status(403).json({ error: "Insufficient scope" });
+  // }
 
   if ("filters" in req.query) {
-    return res
-      .status(400)
-      .json({ error: "Filters not allowed on browse endpoint" });
+    return res.status(400).json({ error: "Filters not allowed" });
   }
 
   const direction = req.query.direction ?? "next";
-  const cursor =
-    typeof req.query.cursor === "string"
-      ? req.query.cursor
-      : null;
-
+  const cursor = typeof req.query.cursor === "string" ? req.query.cursor : null;
   const isPrev = direction === "prev";
 
   const variables = {
@@ -74,6 +66,7 @@ router.get(
     productsCache.set(cacheKey, response);
     return res.json(response);
   } catch (err) {
+    console.error("Products fetch error:", err);
     return res.status(502).json({
       error: "SHOPIFY_UNAVAILABLE",
     });

@@ -33,13 +33,13 @@ app.post(
   shopify.processWebhooks({ webhookHandlers: PrivacyWebhookHandlers })
 );
 
-// If you are adding routes outside of the /api path, remember to
-// also add a proxy rule for them in web/frontend/vite.config.js
-
-app.use("/api", shopify.validateAuthenticatedSession());
-
+// Parse JSON before any routes
 app.use(express.json());
 
+// ✅ APPLY AUTH MIDDLEWARE FIRST - protects all /api routes
+app.use("/api", shopify.validateAuthenticatedSession());
+
+// ✅ THEN mount your routes - they'll be protected by the above middleware
 app.use("/api/products", productsRouter);
 console.log("Products router mounted at /api/products");
 

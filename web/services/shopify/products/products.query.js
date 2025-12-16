@@ -1,30 +1,25 @@
 export const PRODUCTS_QUERY = `
-  query Products(
-    $first: Int!
-    $after: String
-    $query: String
-  ) {
-    products(
-      first: $first
-      after: $after
-      query: $query
-    ) {
+  query fetchProducts($first: Int, $after: String, $last: Int, $before: String) {
+    products(first: $first, after: $after, last: $last, before: $before) {
       edges {
         cursor
         node {
           id
           title
-          handle
           vendor
-          status
-          featuredImage {
-            url
+          featuredImage { url }
+          variants(first: 1) {
+            edges {
+              node { price }
+            }
           }
         }
       }
       pageInfo {
         hasNextPage
         hasPreviousPage
+        startCursor
+        endCursor
       }
     }
   }

@@ -2,6 +2,7 @@ import express from "express";
 import { shopifyGraphQL } from "../services/shopify/graphqlClient.js";
 import { productsCache } from "../services/cache/lru.js";
 import { PRODUCTS_QUERY } from "../services/shopify/products/products.query.js";
+import { listProducts } from "../controllers/products.controller.js";
 
 const router = express.Router();
 const PAGE_SIZE = 50;
@@ -72,5 +73,5 @@ router.get("/", async (req, res) => {
     });
   }
 });
-
+router.get("/products", listProducts);
 export default router;

@@ -14,10 +14,11 @@
   "dependencies": {
     "@shopify/app-bridge-react": "^4.2.8",
     "@shopify/app-bridge-utils": "^3.5.1",
-    "@shopify/polaris": "^12.27.0",
+    "@shopify/polaris": "^13.9.5",
     "@tanstack/react-virtual": "^3.13.13",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "mongoose": "^9.0.2",
     "node-fetch": "^3.3.2",
     "zustand": "^5.0.9"
   },

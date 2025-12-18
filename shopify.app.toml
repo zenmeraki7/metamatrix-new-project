@@ -2,7 +2,7 @@
 
 client_id = "d1fcc7b7acd56e14a84d71913af3ad7f"
 name = "meta-maTrix"
-application_url = "https://luis-joke-vendor-franklin.trycloudflare.com"
+application_url = "https://school-applied-chief-mlb.trycloudflare.com"
 embedded = true
 
 [build]
@@ -16,4 +16,4 @@ api_version = "2026-01"
 scopes = "read_products,write_products"
 
 [auth]
-redirect_urls = [ "https://luis-joke-vendor-franklin.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://school-applied-chief-mlb.trycloudflare.com/api/auth" ]

@@ -1,4 +1,6 @@
 // @ts-check
+import 'dotenv/config';      
+import mongoose from 'mongoose';
 import { join } from "path";
 import { readFileSync } from "fs";
 import express from "express";
@@ -8,6 +10,9 @@ import shopify from "./shopify.js";
 import productCreator from "./product-creator.js";
 import PrivacyWebhookHandlers from "./privacy.js";
 import productsRouter from "./routes/products.js";
+
+mongoose.set("bufferCommands", false);
+mongoose.set("strictQuery", true);
 
 const PORT = parseInt(
   process.env.BACKEND_PORT || process.env.PORT || "3000",
@@ -87,4 +92,27 @@ app.use("/", shopify.ensureInstalledOnShop(), async (_req, res, _next) => {
     );
 });
 
-app.listen(PORT);
+async function startServer() {
+  try {
+    const MONGO_URI = process.env.MONGO_URI;
+
+    if (!MONGO_URI) {
+      throw new Error("MONGO_URI is not defined");
+    }
+
+    await mongoose.connect(MONGO_URI, {
+      autoIndex: false,
+    });
+
+    console.log("✅ MongoDB connected");
+
+    app.listen(PORT, () => {
+      console.log(`✅ Server listening on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("❌ Failed to start server:", err);
+    process.exit(1);
+  }
+}
+
+startServer();

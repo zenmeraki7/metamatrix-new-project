@@ -19,7 +19,10 @@ import {
   Select,
   Tag,
   Spinner,
+  Banner 
 } from "@shopify/polaris";
+import { MetafieldKeyPicker } from "../components/filters/MetafieldKeyPicker";
+import { TagPicker } from "../components/filters/TagPicker";
 
 type ProductRow = {
   shopifyProductId: string;
@@ -76,6 +79,8 @@ const DEFAULT_FILTERS = {
 };
 
 export default function ProductsPage() {
+
+  
   /* ---------------- pagination ---------------- */
 
   const [items, setItems] = useState<ProductRow[]>([]);
@@ -84,6 +89,7 @@ export default function ProductsPage() {
   const [direction, setDirection] = useState<"next" | "prev">("next");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [prevCursor, setPrevCursor] = useState<string | null>(null);
+
 
   /* ---------------- search ---------------- */
 
@@ -298,6 +304,101 @@ export default function ProductsPage() {
     setFiltersOpen(false);
   }, [draft]);
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [allMatchingSelected, setAllMatchingSelected] = useState(false);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+  const [matchedCount, setMatchedCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setExcludedIds(new Set());
+    setAllMatchingSelected(false);
+    setMatchedCount(null);
+  }, [JSON.stringify(filterDsl)]);
+
+  const toId = (p: ProductRow) => p.shopifyProductId;
+
+  const pageIds = useMemo(() => items.map(toId), [items]);
+
+  const isItemSelected = useCallback(
+    (id: string) => {
+      if (allMatchingSelected) return !excludedIds.has(id);
+      return selectedIds.has(id);
+    },
+    [allMatchingSelected, excludedIds, selectedIds]
+  );
+
+  const selectedItemsCount = useMemo(() => {
+    if (allMatchingSelected) return "All";
+    return selectedIds.size;
+  }, [allMatchingSelected, selectedIds]);
+
+  const selectedForTable = useMemo(() => {
+    if (allMatchingSelected) return pageIds.filter((id) => !excludedIds.has(id));
+    return Array.from(selectedIds).filter((id) => pageIds.includes(id));
+  }, [allMatchingSelected, excludedIds, pageIds, selectedIds]);
+
+  const handleSelectionChange = useCallback(
+    (selected: string[]) => {
+      if (allMatchingSelected) {
+        const nextExcluded = new Set(excludedIds);
+        for (const id of pageIds) {
+          const shouldBeSelected = selected.includes(id);
+          const currentlySelected = !nextExcluded.has(id);
+          if (shouldBeSelected && !currentlySelected) nextExcluded.delete(id);
+          else if (!shouldBeSelected && currentlySelected) nextExcluded.add(id);
+        }
+        setExcludedIds(nextExcluded);
+      } else {
+        const next = new Set(selectedIds);
+        for (const id of pageIds) {
+          if (selected.includes(id)) next.add(id);
+          else next.delete(id);
+        }
+        setSelectedIds(next);
+      }
+    },
+    [allMatchingSelected, excludedIds, pageIds, selectedIds]
+  );
+
+  const selectPage = useCallback(() => {
+    if (allMatchingSelected) {
+      const nextExcluded = new Set(excludedIds);
+      for (const id of pageIds) nextExcluded.delete(id);
+      setExcludedIds(nextExcluded);
+      return;
+    }
+    const next = new Set(selectedIds);
+    for (const id of pageIds) next.add(id);
+    setSelectedIds(next);
+  }, [allMatchingSelected, excludedIds, pageIds, selectedIds]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setExcludedIds(new Set());
+    setAllMatchingSelected(false);
+  }, []);
+
+  const selectAllMatching = useCallback(async () => {
+    setAllMatchingSelected(true);
+    setSelectedIds(new Set());
+    setExcludedIds(new Set());
+  }, []);
+
+  const pageSelectedCount = useMemo(() => {
+    if (allMatchingSelected) return pageIds.filter((id) => !excludedIds.has(id)).length;
+    return pageIds.filter((id) => selectedIds.has(id)).length;
+  }, [allMatchingSelected, excludedIds, pageIds, selectedIds]);
+
+  const showBanner = useMemo(() => {
+    return allMatchingSelected || selectedIds.size > 0 || excludedIds.size > 0;
+  }, [allMatchingSelected, selectedIds, excludedIds]);
+
+const [mfOwner, setMfOwner] = useState<"PRODUCT" | "VARIANT">("PRODUCT");
+const [mfKeySel, setMfKeySel] = useState<{ namespace: string; key: string; type: string } | null>(null);
+
+
+
   /* ---------------- UI ---------------- */
 
   return (
@@ -361,12 +462,12 @@ export default function ProductsPage() {
         autoComplete="off"
       />
 
-      <TextField
-        label="Tag contains"
-        value={draft.tag}
-        onChange={(v) => setDraft((p) => ({ ...p, tag: v }))}
-        autoComplete="off"
-      />
+     <TagPicker
+  value={draft.tag}
+  onChange={(tag) => setDraft((p) => ({ ...p, tag }))}
+  label="Tag"
+/>
+
 
       <TextField
         label="Collection ID (GID)"
@@ -442,17 +543,20 @@ export default function ProductsPage() {
         Metafield
       </Text>
 
-      <Select
-        label="Owner"
-        options={[
-          { label: "Product", value: "PRODUCT" },
-          { label: "Variant", value: "VARIANT" },
-        ]}
-        value={draft.mfOwner}
-        onChange={(v) =>
-          setDraft((p) => ({ ...p, mfOwner: v as MetafieldOwner }))
-        }
-      />
+<MetafieldKeyPicker
+  ownerType={mfOwner}
+  value={mfKeySel}
+  onChange={(v) => {
+    setMfKeySel(v);
+    setDraft((p) => ({
+      ...p,
+      mfOwner,
+      mfNamespace: v?.namespace || "",
+      mfKey: v?.key || "",
+      mfType: v?.type || "single_line_text_field",
+    }));
+  }}
+/>
 
       <InlineStack gap="300">
         <TextField
@@ -548,6 +652,73 @@ export default function ProductsPage() {
 
         <Divider />
 
+        {/* Selection controls + banner */}
+{showBanner ? (
+  <Box padding="300">
+    <Banner
+      title={
+        allMatchingSelected
+          ? matchedCount != null
+            ? `All ${matchedCount} matching products are selected`
+            : `All matching products are selected`
+          : `${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"} selected`
+      }
+      tone="info"
+      action={{
+        content: "Clear selection",
+        onAction: clearSelection,
+      }}
+    >
+      <BlockStack gap="200">
+        {!allMatchingSelected ? (
+          <InlineStack gap="200">
+            <Text as="span">
+              {pageSelectedCount === pageIds.length
+                ? `All ${pageIds.length} products on this page are selected.`
+                : `Selected ${pageSelectedCount} of ${pageIds.length} on this page.`}
+            </Text>
+
+            {pageSelectedCount === pageIds.length ? (
+              <Button variant="plain" onClick={selectAllMatching}>
+                {matchedCount != null
+                  ? `Select all ${matchedCount} products that match this filter`
+                  : "Select all products that match this filter"}
+              </Button>
+            ) : (
+              <Button variant="plain" onClick={selectPage}>
+                Select all on this page
+              </Button>
+            )}
+          </InlineStack>
+        ) : (
+          <InlineStack gap="200">
+            <Text as="span">
+              {excludedIds.size
+                ? `${excludedIds.size} excluded from selection.`
+                : "No exclusions."}
+            </Text>
+            <Button variant="plain" onClick={selectPage}>
+              Select all on this page
+            </Button>
+          </InlineStack>
+        )}
+      </BlockStack>
+    </Banner>
+  </Box>
+) : (
+  <Box padding="300">
+    <InlineStack gap="200" align="end">
+      <Button onClick={selectPage} disabled={!items.length}>
+        Select page
+      </Button>
+      <Button onClick={selectAllMatching} disabled={!items.length}>
+        Select all matching
+      </Button>
+    </InlineStack>
+  </Box>
+)}
+
+
         {/* Table */}
         {loading ? (
           <Box padding="500">
@@ -556,58 +727,50 @@ export default function ProductsPage() {
             </InlineStack>
           </Box>
         ) : (
-          <IndexTable
-            resourceName={{ singular: "product", plural: "products" }}
-            itemCount={items.length}
-            selectable={false}
-            headings={[
-              { title: "Product" },
-              { title: "Status" },
-              { title: "Vendor" },
-              { title: "Type" },
-              { title: "Inventory" },
-            ]}
-          >
-            {items.map((p, index) => (
-              <IndexTable.Row
-                id={p.shopifyProductId}
-                key={p.shopifyProductId}
-                position={index}
-              >
-                <IndexTable.Cell>
-                  <InlineStack gap="300" blockAlign="center">
-                    <Thumbnail
-                      source={p.featuredMedia?.url || ""}
-                      alt={p.featuredMedia?.alt || p.title}
-                    />
-                    <Text as="span" fontWeight="semibold">
-                      {p.title}
-                    </Text>
-                  </InlineStack>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <Badge
-                    tone={
-                      p.status === "ACTIVE"
-                        ? "success"
-                        : p.status === "DRAFT"
-                        ? "attention"
-                        : undefined
-                    }
-                  >
-                    {p.status}
-                  </Badge>
-                </IndexTable.Cell>
-                <IndexTable.Cell>{p.vendor || "-"}</IndexTable.Cell>
-                <IndexTable.Cell>{p.productType || "-"}</IndexTable.Cell>
-                <IndexTable.Cell>
-                  {typeof p.totalInventory === "number"
-                    ? p.totalInventory
-                    : "-"}
-                </IndexTable.Cell>
-              </IndexTable.Row>
-            ))}
-          </IndexTable>
+<IndexTable
+  resourceName={{ singular: "product", plural: "products" }}
+  itemCount={items.length}
+  selectable
+  selectedItemsCount={selectedItemsCount as any} // Polaris accepts number | "All"
+  onSelectionChange={handleSelectionChange}
+  headings={[
+    { title: "Product" },
+    { title: "Status" },
+    { title: "Vendor" },
+    { title: "Type" },
+    { title: "Inventory" },
+  ]}
+>
+  {items.map((p, index) => {
+    const id = p.shopifyProductId;
+    return (
+      <IndexTable.Row
+        id={id}
+        key={id}
+        position={index}
+        selected={isItemSelected(id)}
+      >
+        <IndexTable.Cell>
+          <InlineStack gap="300" blockAlign="center">
+            <Thumbnail source={p.featuredMedia?.url || ""} alt={p.featuredMedia?.alt || p.title} />
+            <Text as="span" variant="bodyMd" fontWeight="semibold">
+              {p.title}
+            </Text>
+          </InlineStack>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Badge tone={p.status === "ACTIVE" ? "success" : p.status === "DRAFT" ? "attention" : undefined}>
+            {p.status}
+          </Badge>
+        </IndexTable.Cell>
+        <IndexTable.Cell>{p.vendor || "-"}</IndexTable.Cell>
+        <IndexTable.Cell>{p.productType || "-"}</IndexTable.Cell>
+        <IndexTable.Cell>{typeof p.totalInventory === "number" ? p.totalInventory : "-"}</IndexTable.Cell>
+      </IndexTable.Row>
+    );
+  })}
+</IndexTable>
+
         )}
 
         {/* Pagination */}

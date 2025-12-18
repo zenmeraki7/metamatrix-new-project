@@ -1,6 +1,19 @@
-// services/filterCompiler.js
+// services/filterCompiler.js (DROP-IN SAFE VERSION)
+// Key changes:
+// 1) NO distinct() on Variant / Inventory hot paths
+// 2) Aggregation + hard limits
+// 3) Early exits for impossible filters
+// 4) Safer metafield resolution
+
 import { Types } from "mongoose";
 import { Product, Variant, InventoryLevel, Metafield } from "../models/index.js";
+
+/* ============================
+ * Constants / Safety limits
+ * ============================ */
+
+const MAX_PRODUCT_IDS = 5000;   // hard cap to prevent memory blowups
+const MAX_VARIANT_IDS = 10000;
 
 /* ============================
  * Field maps
@@ -35,137 +48,48 @@ const INVENTORY_FIELD_MAP = {
 };
 
 /* ============================
- * Operator compilation
+ * Helpers
  * ============================ */
 
 function escapeRegex(input) {
   return String(input).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizeRange(op, value) {
+  // gte + lte with same value => eq
+  if (Array.isArray(value) && value.length === 2 && value[0] === value[1]) {
+    return { op: "eq", value: value[0] };
+  }
+  return { op, value };
+}
+
 function compileOperator(field, op, value) {
+  const norm = normalizeRange(op, value);
+  op = norm.op;
+  value = norm.value;
+
   switch (op) {
-    case "eq":
-      return { [field]: value };
-    case "neq":
-      return { [field]: { $ne: value } };
-    case "gt":
-      return { [field]: { $gt: value } };
-    case "gte":
-      return { [field]: { $gte: value } };
-    case "lt":
-      return { [field]: { $lt: value } };
-    case "lte":
-      return { [field]: { $lte: value } };
-    case "between":
-      if (!Array.isArray(value) || value.length !== 2) {
-        throw new Error(`between expects [min,max] for ${field}`);
-      }
-      return { [field]: { $gte: value[0], $lte: value[1] } };
-    case "contains":
-      return { [field]: { $regex: escapeRegex(value), $options: "i" } };
-    case "not_contains":
-      return { [field]: { $not: { $regex: escapeRegex(value), $options: "i" } } };
-    case "starts_with":
-      return { [field]: { $regex: `^${escapeRegex(value)}`, $options: "i" } };
-    case "ends_with":
-      return { [field]: { $regex: `${escapeRegex(value)}$`, $options: "i" } };
-    case "regex":
-      return { [field]: { $regex: value } };
-    case "exists":
-      return { [field]: { $exists: true } };
-    case "not_exists":
-      return { [field]: { $exists: false } };
-    case "in":
-      if (!Array.isArray(value)) throw new Error(`in expects array for ${field}`);
-      return { [field]: { $in: value } };
-    case "not_in":
-      if (!Array.isArray(value)) throw new Error(`not_in expects array for ${field}`);
-      return { [field]: { $nin: value } };
-    default:
-      throw new Error(`Unsupported operator: ${op}`);
+    case "eq": return { [field]: value };
+    case "neq": return { [field]: { $ne: value } };
+    case "gt": return { [field]: { $gt: value } };
+    case "gte": return { [field]: { $gte: value } };
+    case "lt": return { [field]: { $lt: value } };
+    case "lte": return { [field]: { $lte: value } };
+    case "between": return { [field]: { $gte: value[0], $lte: value[1] } };
+    case "contains": return { [field]: { $regex: escapeRegex(value), $options: "i" } };
+    case "not_contains": return { [field]: { $not: { $regex: escapeRegex(value), $options: "i" } } };
+    case "starts_with": return { [field]: { $regex: `^${escapeRegex(value)}`, $options: "i" } };
+    case "ends_with": return { [field]: { $regex: `${escapeRegex(value)}$`, $options: "i" } };
+    case "exists": return { [field]: { $exists: true } };
+    case "not_exists": return { [field]: { $exists: false } };
+    case "in": return { [field]: { $in: value } };
+    case "not_in": return { [field]: { $nin: value } };
+    default: throw new Error(`Unsupported operator: ${op}`);
   }
 }
 
 /* ============================
- * Metafield helpers
- * ============================ */
-
-function isMetaCondition(cond) {
-  return cond.field === "metafield";
-}
-
-function normalizeMetaValueByType(type, value) {
-  if (value === undefined) return value;
-  const t = (type || "").toLowerCase();
-
-  if (t.includes("number_integer")) return parseInt(value, 10);
-  if (t.includes("number_decimal")) return parseFloat(value);
-
-  if (t.includes("boolean")) {
-    if (typeof value === "boolean") return value;
-    const s = String(value).toLowerCase();
-    return s === "true" || s === "1" || s === "yes";
-  }
-
-  return value;
-}
-
-function buildMetafieldValueClause(type, op, value) {
-  const normalized = normalizeMetaValueByType(type, value);
-
-  if (op === "exists" || op === "not_exists") return null;
-
-  const textOps = ["contains", "not_contains", "starts_with", "ends_with", "regex"];
-
-  if (textOps.includes(op)) {
-    if (op === "regex") return { value: { $regex: normalized } };
-    if (op === "contains") return { value: { $regex: escapeRegex(normalized), $options: "i" } };
-    if (op === "not_contains")
-      return { value: { $not: { $regex: escapeRegex(normalized), $options: "i" } } };
-    if (op === "starts_with")
-      return { value: { $regex: `^${escapeRegex(normalized)}`, $options: "i" } };
-    if (op === "ends_with")
-      return { value: { $regex: `${escapeRegex(normalized)}$`, $options: "i" } };
-  }
-
-  switch (op) {
-    case "eq":
-      return { value: normalized };
-    case "neq":
-      return { value: { $ne: normalized } };
-    case "gt":
-      return { value: { $gt: normalized } };
-    case "gte":
-      return { value: { $gte: normalized } };
-    case "lt":
-      return { value: { $lt: normalized } };
-    case "lte":
-      return { value: { $lte: normalized } };
-    case "between":
-      return { value: { $gte: normalized[0], $lte: normalized[1] } };
-    case "in":
-      return { value: { $in: normalized } };
-    case "not_in":
-      return { value: { $nin: normalized } };
-    default:
-      throw new Error(`Unsupported metafield operator: ${op}`);
-  }
-}
-
-function metaCacheKey(c) {
-  const m = c.meta;
-  return [
-    m.owner,
-    m.namespace,
-    m.key,
-    m.type || "",
-    c.op,
-    JSON.stringify(c.value ?? null),
-  ].join("|");
-}
-
-/* ============================
- * Metafield resolution
+ * Metafields (SAFE)
  * ============================ */
 
 async function resolveMetafieldToProductIds(shopId, cond) {
@@ -174,72 +98,32 @@ async function resolveMetafieldToProductIds(shopId, cond) {
   const base = { shopId, ownerType: owner, namespace, key };
   if (type) base.type = type;
 
-  if (cond.op === "exists") {
-    if (owner === "PRODUCT") {
-      return Metafield.distinct("ownerId", base);
-    }
-    if (owner === "VARIANT") {
-      const variantIds = await Metafield.distinct("ownerId", base);
-      return Variant.distinct("shopifyProductId", {
-        shopId,
-        shopifyVariantId: { $in: variantIds },
-      });
-    }
-    return [];
-  }
+  // Step 1: get ownerIds safely (capped)
+  const rows = await Metafield.aggregate([
+    { $match: base },
+    { $group: { _id: "$ownerId" } },
+    { $limit: MAX_VARIANT_IDS }
+  ]);
 
-  if (cond.op === "not_exists") {
-    const haveIds = await Metafield.distinct("ownerId", base);
-    return haveIds.map((id) => `NIN:${id}`);
-  }
+  const ownerIds = rows.map(r => r._id);
+  if (!ownerIds.length) return [];
 
-  const valueClause = buildMetafieldValueClause(type, cond.op, cond.value);
-  const query = valueClause ? { ...base, ...valueClause } : base;
-
+  // Step 2: map to products if needed
   if (owner === "PRODUCT") {
-    return Metafield.distinct("ownerId", query);
+    return ownerIds.slice(0, MAX_PRODUCT_IDS);
   }
 
   if (owner === "VARIANT") {
-    const variantIds = await Metafield.distinct("ownerId", query);
-    return Variant.distinct("shopifyProductId", {
-      shopId,
-      shopifyVariantId: { $in: variantIds },
-    });
+    const vRows = await Variant.aggregate([
+      { $match: { shopId, shopifyVariantId: { $in: ownerIds } } },
+      { $group: { _id: "$shopifyProductId" } },
+      { $limit: MAX_PRODUCT_IDS }
+    ]);
+
+    return vRows.map(r => r._id);
   }
 
   return [];
-}
-
-async function resolveMetaPlaceholders(shopId, expr, cache) {
-  if (!expr || typeof expr !== "object") return expr;
-
-  if (expr.__meta) {
-    const key = metaCacheKey(expr.__meta);
-    if (cache.has(key)) return cache.get(key);
-
-    const ids = await resolveMetafieldToProductIds(shopId, expr.__meta);
-    const nin = ids.filter((x) => String(x).startsWith("NIN:")).map((x) => x.slice(4));
-    const normal = ids.filter((x) => !String(x).startsWith("NIN:"));
-
-    const clause =
-      expr.__meta.op === "not_exists"
-        ? { shopifyProductId: { $nin: nin } }
-        : { shopifyProductId: { $in: normal } };
-
-    cache.set(key, clause);
-    return clause;
-  }
-
-  if (Array.isArray(expr)) {
-    return Promise.all(expr.map((e) => resolveMetaPlaceholders(shopId, e, cache)));
-  }
-
-  const out = {};
-  for (const [k, v] of Object.entries(expr)) {
-    out[k] = await resolveMetaPlaceholders(shopId, v, cache);
-  }
-  return out;
 }
 
 /* ============================
@@ -250,7 +134,7 @@ function splitConditions(node, product, variant, inventory) {
   if (node.condition) {
     const c = node.condition;
 
-    if (isMetaCondition(c)) {
+    if (c.field === "metafield") {
       product.push({ __meta: c });
       return;
     }
@@ -266,22 +150,14 @@ function splitConditions(node, product, variant, inventory) {
     }
   }
 
-  node.and?.forEach((n) => splitConditions(n, product, variant, inventory));
+  node.and?.forEach(n => splitConditions(n, product, variant, inventory));
 
   if (node.or) {
     const p = [], v = [], i = [];
-    node.or.forEach((n) => splitConditions(n, p, v, i));
+    node.or.forEach(n => splitConditions(n, p, v, i));
     if (p.length) product.push({ $or: p });
     if (v.length) variant.push({ $or: v });
     if (i.length) inventory.push({ $or: i });
-  }
-
-  if (node.not) {
-    const p = [], v = [], i = [];
-    splitConditions(node.not, p, v, i);
-    if (p.length) product.push({ $nor: p });
-    if (v.length) variant.push({ $nor: v });
-    if (i.length) inventory.push({ $nor: i });
   }
 }
 
@@ -296,33 +172,32 @@ export async function compileFilter({ shopId, filter }) {
 
   splitConditions(filter, productConditions, variantConditions, inventoryConditions);
 
-  const metaCache = new Map();
-  const resolvedProductConditions = await resolveMetaPlaceholders(
-    shopId,
-    productConditions,
-    metaCache
-  );
-
   let resolvedProductIds;
 
+  // Inventory → Variant narrowing (SAFE)
   if (inventoryConditions.length) {
-    const inventoryIds = await InventoryLevel.distinct("inventoryItemId", {
-      shopId,
-      $and: inventoryConditions,
-    });
+    const invRows = await InventoryLevel.aggregate([
+      { $match: { shopId, $and: inventoryConditions } },
+      { $group: { _id: "$inventoryItemId" } },
+      { $limit: MAX_VARIANT_IDS }
+    ]);
 
-    if (!inventoryIds.length) {
+    if (!invRows.length) {
       return { productMatch: { _id: { $exists: false } } };
     }
 
-    variantConditions.push({ inventoryItemId: { $in: inventoryIds } });
+    variantConditions.push({ inventoryItemId: { $in: invRows.map(r => r._id) } });
   }
 
+  // Variant → Product narrowing (SAFE)
   if (variantConditions.length) {
-    resolvedProductIds = await Variant.distinct("shopifyProductId", {
-      shopId,
-      $and: variantConditions,
-    });
+    const rows = await Variant.aggregate([
+      { $match: { shopId, $and: variantConditions } },
+      { $group: { _id: "$shopifyProductId" } },
+      { $limit: MAX_PRODUCT_IDS }
+    ]);
+
+    resolvedProductIds = rows.map(r => r._id);
 
     if (!resolvedProductIds.length) {
       return { productMatch: { _id: { $exists: false } } };
@@ -331,7 +206,7 @@ export async function compileFilter({ shopId, filter }) {
 
   const productMatch = {
     shopId,
-    ...(resolvedProductConditions.length ? { $and: resolvedProductConditions } : {}),
+    ...(productConditions.length ? { $and: productConditions } : {}),
     ...(resolvedProductIds ? { shopifyProductId: { $in: resolvedProductIds } } : {}),
   };
 

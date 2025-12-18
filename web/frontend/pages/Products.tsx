@@ -238,35 +238,50 @@ export default function ProductsPage() {
 
   /* ---------------- data fetch ---------------- */
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("limit", "50");
-      params.set("mode", "random");
-      params.set("direction", direction);
-      if (cursor) params.set("cursor", cursor);
-      if (filterDsl) params.set("filters", JSON.stringify(filterDsl));
+const fetchProducts = useCallback(async () => {
+  setLoading(true);
+  try {
+    const params = new URLSearchParams();
+    params.set("limit", "50");
+    params.set("direction", direction);
+    if (cursor) params.set("cursor", cursor);
+    if (q.trim()) params.set("query", q); // Shopify search
 
-      const r = await fetch(
-        `/api/products/products?${params.toString()}`,
-        { credentials: "include" },
-      );
+    const r = await fetch(`/api/products?${params.toString()}`, {
+      credentials: "include",
+    });
 
-      if (!r.ok) {
-        throw new Error(await r.text());
-      }
-
-      const data: ApiResp = await r.json();
-      setItems(data.items);
-      setNextCursor(data.pageInfo.nextCursor);
-      setPrevCursor(data.pageInfo.prevCursor);
-    } catch (e) {
-      console.error("Fetch products failed", e);
-    } finally {
-      setLoading(false);
+    if (!r.ok) {
+      throw new Error(await r.text());
     }
-  }, [cursor, direction, filterDsl]);
+
+    const data = await r.json();
+
+    // 🔁 map Shopify → UI format
+    setItems(
+      data.products.map((p: any) => ({
+        shopifyProductId: p.id,
+        title: p.title,
+        status: p.status,
+        vendor: p.vendor,
+        productType: p.productType,
+        totalInventory: p.totalInventory,
+        featuredMedia: {
+          url: p.image?.url,
+          alt: p.image?.altText,
+        },
+      }))
+    );
+
+    setNextCursor(data.pageInfo.hasNextPage ? data.pageInfo.endCursor : null);
+    setPrevCursor(data.pageInfo.hasPreviousPage ? data.pageInfo.startCursor : null);
+  } catch (e) {
+    console.error("Fetch products failed", e);
+  } finally {
+    setLoading(false);
+  }
+}, [cursor, direction, q]);
+
 
   useEffect(() => {
     fetchProducts();

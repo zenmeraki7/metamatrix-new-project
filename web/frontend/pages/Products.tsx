@@ -15,14 +15,17 @@ import {
   Popover,
   Box,
   Divider,
-  ChoiceList,
-  Select,
-  Tag,
   Spinner,
-  Banner 
+  Banner,
 } from "@shopify/polaris";
-import { MetafieldKeyPicker } from "../components/filters/MetafieldKeyPicker";
+import { StatusFilter } from "../components/filters/StatusFilter";
+import { VendorFilter } from "../components/filters/VendorFilter";
+import { ProductTypeFilter } from "../components/filters/ProductTypeFilter";
 import { TagPicker } from "../components/filters/TagPicker";
+import { CollectionFilter } from "../components/filters/CollectionFilter";
+import { InventoryFilter } from "../components/filters/InventoryFilter";
+import { VariantFilter } from "../components/filters/VariantFilter";
+import { MetafieldKeyPicker } from "../components/filters/MetafieldKeyPicker";
 
 type ProductRow = {
   shopifyProductId: string;
@@ -79,8 +82,6 @@ const DEFAULT_FILTERS = {
 };
 
 export default function ProductsPage() {
-
-  
   /* ---------------- pagination ---------------- */
 
   const [items, setItems] = useState<ProductRow[]>([]);
@@ -89,7 +90,6 @@ export default function ProductsPage() {
   const [direction, setDirection] = useState<"next" | "prev">("next");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [prevCursor, setPrevCursor] = useState<string | null>(null);
-
 
   /* ---------------- search ---------------- */
 
@@ -101,11 +101,22 @@ export default function ProductsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [draft, setDraft] = useState({ ...DEFAULT_FILTERS });
   const [applied, setApplied] = useState({ ...DEFAULT_FILTERS });
+  const [openSection, setOpenSection] = useState<{
+    status?: boolean;
+    vendor?: boolean;
+    productType?: boolean;
+    inventory?: boolean;
+    variant?: boolean;
+    metafield?: boolean;
+    tag?: boolean;
+    collection?: boolean;
+  }>({});
 
-  const appliedCount = useMemo(
-    () => countAppliedFilters(applied),
-    [applied],
-  );
+  const appliedCount = useMemo(() => countAppliedFilters(applied), [applied]);
+
+  const toggleSection = (key: keyof typeof openSection) => {
+    setOpenSection((p) => ({ ...p, [key]: !p[key] }));
+  };
 
   /* ---------------- filter DSL ---------------- */
 
@@ -223,10 +234,7 @@ export default function ProductsPage() {
         },
       };
 
-      if (
-        applied.mfOp !== "exists" &&
-        applied.mfOp !== "not_exists"
-      ) {
+      if (applied.mfOp !== "exists" && applied.mfOp !== "not_exists") {
         cond.value = applied.mfValue;
       }
 
@@ -238,50 +246,51 @@ export default function ProductsPage() {
 
   /* ---------------- data fetch ---------------- */
 
-const fetchProducts = useCallback(async () => {
-  setLoading(true);
-  try {
-    const params = new URLSearchParams();
-    params.set("limit", "50");
-    params.set("direction", direction);
-    if (cursor) params.set("cursor", cursor);
-    if (q.trim()) params.set("query", q); // Shopify search
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("limit", "50");
+      params.set("direction", direction);
+      if (cursor) params.set("cursor", cursor);
+      if (q.trim()) params.set("query", q); // Shopify search
 
-    const r = await fetch(`/api/products?${params.toString()}`, {
-      credentials: "include",
-    });
+      const r = await fetch(`/api/products?${params.toString()}`, {
+        credentials: "include",
+      });
 
-    if (!r.ok) {
-      throw new Error(await r.text());
+      if (!r.ok) {
+        throw new Error(await r.text());
+      }
+
+      const data = await r.json();
+
+      // 🔁 map Shopify → UI format
+      setItems(
+        data.products.map((p: any) => ({
+          shopifyProductId: p.id,
+          title: p.title,
+          status: p.status,
+          vendor: p.vendor,
+          productType: p.productType,
+          totalInventory: p.totalInventory,
+          featuredMedia: {
+            url: p.image?.url,
+            alt: p.image?.altText,
+          },
+        }))
+      );
+
+      setNextCursor(data.pageInfo.hasNextPage ? data.pageInfo.endCursor : null);
+      setPrevCursor(
+        data.pageInfo.hasPreviousPage ? data.pageInfo.startCursor : null
+      );
+    } catch (e) {
+      console.error("Fetch products failed", e);
+    } finally {
+      setLoading(false);
     }
-
-    const data = await r.json();
-
-    // 🔁 map Shopify → UI format
-    setItems(
-      data.products.map((p: any) => ({
-        shopifyProductId: p.id,
-        title: p.title,
-        status: p.status,
-        vendor: p.vendor,
-        productType: p.productType,
-        totalInventory: p.totalInventory,
-        featuredMedia: {
-          url: p.image?.url,
-          alt: p.image?.altText,
-        },
-      }))
-    );
-
-    setNextCursor(data.pageInfo.hasNextPage ? data.pageInfo.endCursor : null);
-    setPrevCursor(data.pageInfo.hasPreviousPage ? data.pageInfo.startCursor : null);
-  } catch (e) {
-    console.error("Fetch products failed", e);
-  } finally {
-    setLoading(false);
-  }
-}, [cursor, direction, q]);
-
+  }, [cursor, direction, q]);
 
   useEffect(() => {
     fetchProducts();
@@ -301,7 +310,7 @@ const fetchProducts = useCallback(async () => {
 
       qDebounceRef.current = window.setTimeout(fetchProducts, 250);
     },
-    [fetchProducts],
+    [fetchProducts]
   );
 
   const clearAll = useCallback(() => {
@@ -349,7 +358,8 @@ const fetchProducts = useCallback(async () => {
   }, [allMatchingSelected, selectedIds]);
 
   const selectedForTable = useMemo(() => {
-    if (allMatchingSelected) return pageIds.filter((id) => !excludedIds.has(id));
+    if (allMatchingSelected)
+      return pageIds.filter((id) => !excludedIds.has(id));
     return Array.from(selectedIds).filter((id) => pageIds.includes(id));
   }, [allMatchingSelected, excludedIds, pageIds, selectedIds]);
 
@@ -361,7 +371,8 @@ const fetchProducts = useCallback(async () => {
           const shouldBeSelected = selected.includes(id);
           const currentlySelected = !nextExcluded.has(id);
           if (shouldBeSelected && !currentlySelected) nextExcluded.delete(id);
-          else if (!shouldBeSelected && currentlySelected) nextExcluded.add(id);
+          else if (!shouldBeSelected && currentlySelected)
+            nextExcluded.add(id);
         }
         setExcludedIds(nextExcluded);
       } else {
@@ -401,18 +412,23 @@ const fetchProducts = useCallback(async () => {
   }, []);
 
   const pageSelectedCount = useMemo(() => {
-    if (allMatchingSelected) return pageIds.filter((id) => !excludedIds.has(id)).length;
+    if (allMatchingSelected)
+      return pageIds.filter((id) => !excludedIds.has(id)).length;
     return pageIds.filter((id) => selectedIds.has(id)).length;
   }, [allMatchingSelected, excludedIds, pageIds, selectedIds]);
 
   const showBanner = useMemo(() => {
-    return allMatchingSelected || selectedIds.size > 0 || excludedIds.size > 0;
+    return (
+      allMatchingSelected || selectedIds.size > 0 || excludedIds.size > 0
+    );
   }, [allMatchingSelected, selectedIds, excludedIds]);
 
-const [mfOwner, setMfOwner] = useState<"PRODUCT" | "VARIANT">("PRODUCT");
-const [mfKeySel, setMfKeySel] = useState<{ namespace: string; key: string; type: string } | null>(null);
-
-
+  const [mfOwner, setMfOwner] = useState<"PRODUCT" | "VARIANT">("PRODUCT");
+  const [mfKeySel, setMfKeySel] = useState<{
+    namespace: string;
+    key: string;
+    type: string;
+  } | null>(null);
 
   /* ---------------- UI ---------------- */
 
@@ -434,229 +450,159 @@ const [mfKeySel, setMfKeySel] = useState<{ namespace: string; key: string; type:
                 />
               </div>
 
-             <Popover
-  active={filtersOpen}
-  onClose={() => setFiltersOpen(false)}
-  activator={
-    <Button onClick={() => setFiltersOpen((v) => !v)}>
-      Filters{appliedCount ? ` (${appliedCount})` : ""}
-    </Button>
-  }
->
-  <Box padding="300" width="420px">
-    <BlockStack gap="300">
-      <Text as="h3" variant="headingMd">
-        Filters
-      </Text>
-
-      <Divider />
-
-      <ChoiceList
-        title="Status"
-        choices={[
-          { label: "Active", value: "ACTIVE" },
-          { label: "Draft", value: "DRAFT" },
-          { label: "Archived", value: "ARCHIVED" },
-        ]}
-        selected={draft.status}
-        onChange={(v) => setDraft((p) => ({ ...p, status: v }))}
-        allowMultiple
-      />
-
-      <TextField
-        label="Vendor contains"
-        value={draft.vendor}
-        onChange={(v) => setDraft((p) => ({ ...p, vendor: v }))}
-        autoComplete="off"
-      />
-
-      <TextField
-        label="Product type contains"
-        value={draft.productType}
-        onChange={(v) => setDraft((p) => ({ ...p, productType: v }))}
-        autoComplete="off"
-      />
-
-     <TagPicker
-  value={draft.tag}
-  onChange={(tag) => setDraft((p) => ({ ...p, tag }))}
-  label="Tag"
-/>
-
-
-      <TextField
-        label="Collection ID (GID)"
-        value={draft.collectionId}
-        onChange={(v) =>
-          setDraft((p) => ({ ...p, collectionId: v }))
-        }
-        autoComplete="off"
-      />
-
-      <Divider />
-
-      <Text as="h4" variant="headingSm">
-        Inventory
-      </Text>
-
-      <InlineStack gap="300">
-        <TextField
-          label="Min"
-          value={draft.inventoryMin}
-          onChange={(v) =>
-            setDraft((p) => ({ ...p, inventoryMin: v }))
-          }
-          autoComplete="off"
-        />
-        <TextField
-          label="Max"
-          value={draft.inventoryMax}
-          onChange={(v) =>
-            setDraft((p) => ({ ...p, inventoryMax: v }))
-          }
-          autoComplete="off"
-        />
-      </InlineStack>
-
-      <Divider />
-
-      <Text as="h4" variant="headingSm">
-        Variant
-      </Text>
-
-      <TextField
-        label="SKU contains"
-        value={draft.variantSku}
-        onChange={(v) =>
-          setDraft((p) => ({ ...p, variantSku: v }))
-        }
-        autoComplete="off"
-      />
-
-      <InlineStack gap="300">
-        <TextField
-          label="Price min"
-          value={draft.variantPriceMin}
-          onChange={(v) =>
-            setDraft((p) => ({ ...p, variantPriceMin: v }))
-          }
-          autoComplete="off"
-        />
-        <TextField
-          label="Price max"
-          value={draft.variantPriceMax}
-          onChange={(v) =>
-            setDraft((p) => ({ ...p, variantPriceMax: v }))
-          }
-          autoComplete="off"
-        />
-      </InlineStack>
-
-      <Divider />
-
-      <Text as="h4" variant="headingSm">
-        Metafield
-      </Text>
-
-<MetafieldKeyPicker
-  ownerType={mfOwner}
-  value={mfKeySel}
-  onChange={(v) => {
-    setMfKeySel(v);
-    setDraft((p) => ({
-      ...p,
-      mfOwner,
-      mfNamespace: v?.namespace || "",
-      mfKey: v?.key || "",
-      mfType: v?.type || "single_line_text_field",
-    }));
-  }}
-/>
-
-      <InlineStack gap="300">
-        <TextField
-          label="Namespace"
-          value={draft.mfNamespace}
-          onChange={(v) =>
-            setDraft((p) => ({ ...p, mfNamespace: v }))
-          }
-          autoComplete="off"
-        />
-        <TextField
-          label="Key"
-          value={draft.mfKey}
-          onChange={(v) =>
-            setDraft((p) => ({ ...p, mfKey: v }))
-          }
-          autoComplete="off"
-        />
-      </InlineStack>
-
-      <Select
-        label="Type"
-        options={[
-          { label: "single_line_text_field", value: "single_line_text_field" },
-          { label: "multi_line_text_field", value: "multi_line_text_field" },
-          { label: "number_integer", value: "number_integer" },
-          { label: "number_decimal", value: "number_decimal" },
-          { label: "boolean", value: "boolean" },
-          { label: "date", value: "date" },
-          { label: "date_time", value: "date_time" },
-        ]}
-        value={draft.mfType}
-        onChange={(v) =>
-          setDraft((p) => ({ ...p, mfType: v }))
-        }
-      />
-
-      <Select
-        label="Operator"
-        options={[
-          { label: "equals", value: "eq" },
-          { label: "contains", value: "contains" },
-          { label: "greater than", value: "gt" },
-          { label: "less than", value: "lt" },
-          { label: "exists", value: "exists" },
-          { label: "not exists", value: "not_exists" },
-        ]}
-        value={draft.mfOp}
-        onChange={(v) =>
-          setDraft((p) => ({ ...p, mfOp: v as any }))
-        }
-      />
-
-      {draft.mfOp !== "exists" &&
-        draft.mfOp !== "not_exists" && (
-          <TextField
-            label="Value"
-            value={draft.mfValue}
-            onChange={(v) =>
-              setDraft((p) => ({ ...p, mfValue: v }))
-            }
-            autoComplete="off"
-          />
-        )}
-
-      <Divider />
-
-      <InlineStack align="end" gap="200">
-        <Button onClick={() => setDraft(applied)}>Reset</Button>
-        <Button destructive onClick={clearAll}>
-          Clear all
-        </Button>
-        <Button variant="primary" onClick={applyDraft}>
-          Apply
-        </Button>
-      </InlineStack>
-    </BlockStack>
-  </Box>
-</Popover>
-
-              <Button
-                tone="critical"
-                variant="tertiary"
-                onClick={clearAll}
+              <Popover
+                active={filtersOpen}
+                onClose={() => setFiltersOpen(false)}
+                activator={
+                  <Button onClick={() => setFiltersOpen((v) => !v)}>
+                    Filters{appliedCount ? ` (${appliedCount})` : ""}
+                  </Button>
+                }
               >
+                <Box padding="300" width="420px">
+                  <BlockStack gap="300">
+                    <Text as="h3" variant="headingMd">
+                      Filters
+                    </Text>
+
+                    <Divider />
+
+                    <StatusFilter
+                      isOpen={!!openSection.status}
+                      onToggle={() => toggleSection("status")}
+                      selected={draft.status}
+                      onChange={(v) => setDraft((p) => ({ ...p, status: v }))}
+                    />
+
+                    <Divider />
+
+                    <VendorFilter
+                      isOpen={!!openSection.vendor}
+                      onToggle={() => toggleSection("vendor")}
+                      value={draft.vendor}
+                      onChange={(v) => setDraft((p) => ({ ...p, vendor: v }))}
+                    />
+
+                    <Divider />
+
+                    <ProductTypeFilter
+                      isOpen={!!openSection.productType}
+                      onToggle={() => toggleSection("productType")}
+                      value={draft.productType}
+                      onChange={(v) =>
+                        setDraft((p) => ({ ...p, productType: v }))
+                      }
+                    />
+
+                    <Divider />
+
+                    <TagPicker
+                      isOpen={!!openSection.tag}
+                      onToggle={() => toggleSection("tag")}
+                      value={draft.tag}
+                      onChange={(tag) => setDraft((p) => ({ ...p, tag }))}
+                    />
+
+                    <Divider />
+
+                    <CollectionFilter
+                      isOpen={!!openSection.collection}
+                      onToggle={() => toggleSection("collection")}
+                      value={draft.collectionId}
+                      onChange={(v) =>
+                        setDraft((p) => ({ ...p, collectionId: v }))
+                      }
+                    />
+
+                    <Divider />
+
+                    <InventoryFilter
+                      isOpen={!!openSection.inventory}
+                      onToggle={() => toggleSection("inventory")}
+                      min={draft.inventoryMin}
+                      max={draft.inventoryMax}
+                      onMinChange={(v) =>
+                        setDraft((p) => ({ ...p, inventoryMin: v }))
+                      }
+                      onMaxChange={(v) =>
+                        setDraft((p) => ({ ...p, inventoryMax: v }))
+                      }
+                    />
+
+                    <Divider />
+
+                    <VariantFilter
+                      isOpen={!!openSection.variant}
+                      onToggle={() => toggleSection("variant")}
+                      sku={draft.variantSku}
+                      priceMin={draft.variantPriceMin}
+                      priceMax={draft.variantPriceMax}
+                      onSkuChange={(v) =>
+                        setDraft((p) => ({ ...p, variantSku: v }))
+                      }
+                      onPriceMinChange={(v) =>
+                        setDraft((p) => ({ ...p, variantPriceMin: v }))
+                      }
+                      onPriceMaxChange={(v) =>
+                        setDraft((p) => ({ ...p, variantPriceMax: v }))
+                      }
+                    />
+
+                    <Divider />
+
+                    <MetafieldKeyPicker
+                      isOpen={!!openSection.metafield}
+                      onToggle={() => toggleSection("metafield")}
+                      ownerType={mfOwner}
+                      selectedKey={mfKeySel}
+                      namespace={draft.mfNamespace}
+                      keyValue={draft.mfKey}
+                      type={draft.mfType}
+                      operator={draft.mfOp}
+                      value={draft.mfValue}
+                      onKeySelect={(v) => {
+                        setMfKeySel(v);
+                        setDraft((p) => ({
+                          ...p,
+                          mfOwner,
+                          mfNamespace: v?.namespace || "",
+                          mfKey: v?.key || "",
+                          mfType: v?.type || "single_line_text_field",
+                        }));
+                      }}
+                      onNamespaceChange={(v) =>
+                        setDraft((p) => ({ ...p, mfNamespace: v }))
+                      }
+                      onKeyChange={(v) =>
+                        setDraft((p) => ({ ...p, mfKey: v }))
+                      }
+                      onTypeChange={(v) =>
+                        setDraft((p) => ({ ...p, mfType: v }))
+                      }
+                      onOperatorChange={(v) =>
+                        setDraft((p) => ({ ...p, mfOp: v as any }))
+                      }
+                      onValueChange={(v) =>
+                        setDraft((p) => ({ ...p, mfValue: v }))
+                      }
+                    />
+
+                    <Divider />
+
+                    <InlineStack align="end" gap="200">
+                      <Button onClick={() => setDraft(applied)}>Reset</Button>
+                      <Button destructive onClick={clearAll}>
+                        Clear all
+                      </Button>
+                      <Button variant="primary" onClick={applyDraft}>
+                        Apply
+                      </Button>
+                    </InlineStack>
+                  </BlockStack>
+                </Box>
+              </Popover>
+
+              <Button tone="critical" variant="tertiary" onClick={clearAll}>
                 Clear
               </Button>
             </InlineStack>
@@ -668,71 +614,72 @@ const [mfKeySel, setMfKeySel] = useState<{ namespace: string; key: string; type:
         <Divider />
 
         {/* Selection controls + banner */}
-{showBanner ? (
-  <Box padding="300">
-    <Banner
-      title={
-        allMatchingSelected
-          ? matchedCount != null
-            ? `All ${matchedCount} matching products are selected`
-            : `All matching products are selected`
-          : `${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"} selected`
-      }
-      tone="info"
-      action={{
-        content: "Clear selection",
-        onAction: clearSelection,
-      }}
-    >
-      <BlockStack gap="200">
-        {!allMatchingSelected ? (
-          <InlineStack gap="200">
-            <Text as="span">
-              {pageSelectedCount === pageIds.length
-                ? `All ${pageIds.length} products on this page are selected.`
-                : `Selected ${pageSelectedCount} of ${pageIds.length} on this page.`}
-            </Text>
+        {showBanner ? (
+          <Box padding="300">
+            <Banner
+              title={
+                allMatchingSelected
+                  ? matchedCount != null
+                    ? `All ${matchedCount} matching products are selected`
+                    : `All matching products are selected`
+                  : `${selectedIds.size} product${
+                      selectedIds.size === 1 ? "" : "s"
+                    } selected`
+              }
+              tone="info"
+              action={{
+                content: "Clear selection",
+                onAction: clearSelection,
+              }}
+            >
+              <BlockStack gap="200">
+                {!allMatchingSelected ? (
+                  <InlineStack gap="200">
+                    <Text as="span">
+                      {pageSelectedCount === pageIds.length
+                        ? `All ${pageIds.length} products on this page are selected.`
+                        : `Selected ${pageSelectedCount} of ${pageIds.length} on this page.`}
+                    </Text>
 
-            {pageSelectedCount === pageIds.length ? (
-              <Button variant="plain" onClick={selectAllMatching}>
-                {matchedCount != null
-                  ? `Select all ${matchedCount} products that match this filter`
-                  : "Select all products that match this filter"}
-              </Button>
-            ) : (
-              <Button variant="plain" onClick={selectPage}>
-                Select all on this page
-              </Button>
-            )}
-          </InlineStack>
+                    {pageSelectedCount === pageIds.length ? (
+                      <Button variant="plain" onClick={selectAllMatching}>
+                        {matchedCount != null
+                          ? `Select all ${matchedCount} products that match this filter`
+                          : "Select all products that match this filter"}
+                      </Button>
+                    ) : (
+                      <Button variant="plain" onClick={selectPage}>
+                        Select all on this page
+                      </Button>
+                    )}
+                  </InlineStack>
+                ) : (
+                  <InlineStack gap="200">
+                    <Text as="span">
+                      {excludedIds.size
+                        ? `${excludedIds.size} excluded from selection.`
+                        : "No exclusions."}
+                    </Text>
+                    <Button variant="plain" onClick={selectPage}>
+                      Select all on this page
+                    </Button>
+                  </InlineStack>
+                )}
+              </BlockStack>
+            </Banner>
+          </Box>
         ) : (
-          <InlineStack gap="200">
-            <Text as="span">
-              {excludedIds.size
-                ? `${excludedIds.size} excluded from selection.`
-                : "No exclusions."}
-            </Text>
-            <Button variant="plain" onClick={selectPage}>
-              Select all on this page
-            </Button>
-          </InlineStack>
+          <Box padding="300">
+            <InlineStack gap="200" align="end">
+              <Button onClick={selectPage} disabled={!items.length}>
+                Select page
+              </Button>
+              <Button onClick={selectAllMatching} disabled={!items.length}>
+                Select all matching
+              </Button>
+            </InlineStack>
+          </Box>
         )}
-      </BlockStack>
-    </Banner>
-  </Box>
-) : (
-  <Box padding="300">
-    <InlineStack gap="200" align="end">
-      <Button onClick={selectPage} disabled={!items.length}>
-        Select page
-      </Button>
-      <Button onClick={selectAllMatching} disabled={!items.length}>
-        Select all matching
-      </Button>
-    </InlineStack>
-  </Box>
-)}
-
 
         {/* Table */}
         {loading ? (
@@ -742,50 +689,64 @@ const [mfKeySel, setMfKeySel] = useState<{ namespace: string; key: string; type:
             </InlineStack>
           </Box>
         ) : (
-<IndexTable
-  resourceName={{ singular: "product", plural: "products" }}
-  itemCount={items.length}
-  selectable
-  selectedItemsCount={selectedItemsCount as any} // Polaris accepts number | "All"
-  onSelectionChange={handleSelectionChange}
-  headings={[
-    { title: "Product" },
-    { title: "Status" },
-    { title: "Vendor" },
-    { title: "Type" },
-    { title: "Inventory" },
-  ]}
->
-  {items.map((p, index) => {
-    const id = p.shopifyProductId;
-    return (
-      <IndexTable.Row
-        id={id}
-        key={id}
-        position={index}
-        selected={isItemSelected(id)}
-      >
-        <IndexTable.Cell>
-          <InlineStack gap="300" blockAlign="center">
-            <Thumbnail source={p.featuredMedia?.url || ""} alt={p.featuredMedia?.alt || p.title} />
-            <Text as="span" variant="bodyMd" fontWeight="semibold">
-              {p.title}
-            </Text>
-          </InlineStack>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <Badge tone={p.status === "ACTIVE" ? "success" : p.status === "DRAFT" ? "attention" : undefined}>
-            {p.status}
-          </Badge>
-        </IndexTable.Cell>
-        <IndexTable.Cell>{p.vendor || "-"}</IndexTable.Cell>
-        <IndexTable.Cell>{p.productType || "-"}</IndexTable.Cell>
-        <IndexTable.Cell>{typeof p.totalInventory === "number" ? p.totalInventory : "-"}</IndexTable.Cell>
-      </IndexTable.Row>
-    );
-  })}
-</IndexTable>
-
+          <IndexTable
+            resourceName={{ singular: "product", plural: "products" }}
+            itemCount={items.length}
+            selectable
+            selectedItemsCount={selectedItemsCount as any} // Polaris accepts number | "All"
+            onSelectionChange={handleSelectionChange}
+            headings={[
+              { title: "Product" },
+              { title: "Status" },
+              { title: "Vendor" },
+              { title: "Type" },
+              { title: "Inventory" },
+            ]}
+          >
+            {items.map((p, index) => {
+              const id = p.shopifyProductId;
+              return (
+                <IndexTable.Row
+                  id={id}
+                  key={id}
+                  position={index}
+                  selected={isItemSelected(id)}
+                >
+                  <IndexTable.Cell>
+                    <InlineStack gap="300" blockAlign="center">
+                      <Thumbnail
+                        source={p.featuredMedia?.url || ""}
+                        alt={p.featuredMedia?.alt || p.title}
+                      />
+                      <Text as="span" variant="bodyMd" fontWeight="semibold">
+                        {p.title}
+                      </Text>
+                    </InlineStack>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Badge
+                      tone={
+                        p.status === "ACTIVE"
+                          ? "success"
+                          : p.status === "DRAFT"
+                          ? "attention"
+                          : undefined
+                      }
+                    >
+                      {p.status}
+                    </Badge>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>{p.vendor || "-"}</IndexTable.Cell>
+                  <IndexTable.Cell>{p.productType || "-"}</IndexTable.Cell>
+                  <IndexTable.Cell>
+                    {typeof p.totalInventory === "number"
+                      ? p.totalInventory
+                      : "-"}
+                  </IndexTable.Cell>
+                </IndexTable.Row>
+              );
+            })}
+          </IndexTable>
         )}
 
         {/* Pagination */}

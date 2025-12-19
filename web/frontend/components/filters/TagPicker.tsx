@@ -1,6 +1,7 @@
 // components/TagPicker.tsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Autocomplete } from "@shopify/polaris";
+import { BlockStack, Button, Collapsible, ChoiceList, TextField } from "@shopify/polaris";
+import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
 type TagOption = { value: string; label: string; count?: number };
 
@@ -10,21 +11,21 @@ type SearchResp = {
 };
 
 export function TagPicker({
-  value,
+  selected,
   onChange,
   label = "Tag",
-  placeholder = "Search tags",
   disabled,
-  helpText,
+  isOpen,
+  onToggle,
 }: {
-  value: string; // selected tag string
-  onChange: (tag: string) => void;
+  selected: string[]; // selected tag values array
+  onChange: (tags: string[]) => void;
   label?: string;
-  placeholder?: string;
   disabled?: boolean;
-  helpText?: string;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
-  const [inputValue, setInputValue] = useState(value || "");
+  const [inputValue, setInputValue] = useState("");
   const [options, setOptions] = useState<TagOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export function TagPicker({
     try {
       const params = new URLSearchParams();
       params.set("q", q);
-      params.set("limit", "20");
+      params.set("limit", "50");
       if (cursor) params.set("cursor", cursor);
 
       const r = await fetch(`/api/tags/search?${params.toString()}`);
@@ -65,46 +66,65 @@ export function TagPicker({
   );
 
   useEffect(() => {
-    if (disabled) return;
+    if (disabled || !isOpen) return;
     fetchTags({ q: "", cursor: null });
-  }, [disabled, fetchTags]);
+  }, [disabled, isOpen, fetchTags]);
 
   const loadMore = useCallback(() => {
     if (!hasNext || loading) return;
     fetchTags({ q: latestQueryRef.current.trim().toLowerCase(), cursor: nextCursor });
   }, [fetchTags, hasNext, loading, nextCursor]);
 
-  const polarisOptions = useMemo(
+  const polarisChoices = useMemo(
     () => options.map((o) => ({ value: o.value, label: o.label })),
     [options]
   );
 
-  const textField = (
-    <Autocomplete.TextField
-      label={label}
-      value={inputValue}
-      onChange={onInputChange}
-      placeholder={placeholder}
-      helpText={helpText}
-      autoComplete="off"
-      disabled={disabled}
-    />
-  );
-
   return (
-    <Autocomplete
-      options={polarisOptions}
-      selected={value ? [value] : []}
-      onSelect={(selected) => {
-        const v = selected?.[0] || "";
-        onChange(v);
-        setInputValue(v);
-      }}
-      textField={textField}
-      loading={loading}
-      willLoadMoreResults={hasNext}
-      onLoadMoreResults={loadMore}
-      emptyState={inputValue.trim() ? `No tags found for "${inputValue.trim()}".` : "No tags found."}
-    />
+    <BlockStack gap="200">
+      <Button
+        variant="plain"
+        icon={isOpen ? ChevronUpIcon : ChevronDownIcon}
+        onClick={onToggle}
+        textAlign="left"
+        disabled={disabled}
+      >
+        {label}
+      </Button>
+      <Collapsible open={isOpen}>
+        <BlockStack gap="200">
+          <TextField
+            placeholder="Search tags..."
+            value={inputValue}
+            onChange={onInputChange}
+            disabled={disabled || loading}
+          />
+          {polarisChoices.length > 0 ? (
+            <ChoiceList
+              titleHidden
+              allowMultiple
+              choices={polarisChoices}
+              selected={selected}
+              onChange={onChange}
+              disabled={disabled || loading}
+            />
+          ) : (
+            <div style={{ padding: "12px", fontSize: "14px", color: "#666" }}>
+              {loading ? "Loading..." : inputValue.trim() ? `No tags found for "${inputValue.trim()}".` : "No tags found."}
+            </div>
+          )}
+          {hasNext && (
+            <Button
+              onClick={loadMore}
+              disabled={loading || !hasNext}
+              variant="plain"
+              size="slim"
+            >
+              {loading ? "Loading..." : "Load more"}
+            </Button>
+          )}
+        </BlockStack>
+      </Collapsible>
+    </BlockStack>
   );
 }

@@ -1,6 +1,7 @@
 // components/MetafieldKeyPicker.tsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Autocomplete, Select } from "@shopify/polaris";
+import { BlockStack, Button, Collapsible, ChoiceList, TextField } from "@shopify/polaris";
+import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
 type OwnerType = "PRODUCT" | "VARIANT" | "COLLECTION";
 
@@ -19,22 +20,24 @@ type Resp = {
 
 export function MetafieldKeyPicker({
   ownerType,
-  value,
+  selected,
   onChange,
   label = "Metafield key",
-  placeholder = "Search namespace or key",
   disabled,
+  isOpen,
+  onToggle,
   typeFilter, // optional: constrain to a type
 }: {
   ownerType: OwnerType;
-  value: { namespace: string; key: string; type: string } | null;
-  onChange: (v: { namespace: string; key: string; type: string } | null) => void;
+  selected: string[]; // encoded as "namespace|||key|||type"
+  onChange: (values: string[]) => void;
   label?: string;
-  placeholder?: string;
   disabled?: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
   typeFilter?: string | null;
 }) {
-  const [inputValue, setInputValue] = useState(value ? `${value.namespace}.${value.key}` : "");
+  const [inputValue, setInputValue] = useState("");
   const [options, setOptions] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export function MetafieldKeyPicker({
         const params = new URLSearchParams();
         params.set("ownerType", ownerType);
         params.set("q", q);
-        params.set("limit", "20");
+        params.set("limit", "50");
         if (typeFilter) params.set("type", typeFilter);
         if (cursor) params.set("cursor", cursor);
 
@@ -68,9 +71,9 @@ export function MetafieldKeyPicker({
   );
 
   useEffect(() => {
-    if (disabled) return;
+    if (disabled || !isOpen) return;
     fetchKeys({ q: "", cursor: null });
-  }, [disabled, fetchKeys]);
+  }, [disabled, isOpen, fetchKeys]);
 
   const onInputChange = useCallback(
     (val: string) => {
@@ -89,8 +92,8 @@ export function MetafieldKeyPicker({
     fetchKeys({ q: latestQueryRef.current.trim().toLowerCase(), cursor: nextCursor });
   }, [fetchKeys, hasNext, loading, nextCursor]);
 
-  // Polaris Autocomplete requires string values; encode triple as one string
-  const polarisOptions = useMemo(
+  // Encode triple as one string for ChoiceList
+  const polarisChoices = useMemo(
     () =>
       options.map((o) => ({
         value: `${o.namespace}|||${o.key}|||${o.type}`,
@@ -99,38 +102,51 @@ export function MetafieldKeyPicker({
     [options]
   );
 
-  const selectedValue = value ? [`${value.namespace}|||${value.key}|||${value.type}`] : [];
-
-  const textField = (
-    <Autocomplete.TextField
-      label={label}
-      value={inputValue}
-      onChange={onInputChange}
-      placeholder={placeholder}
-      autoComplete="off"
-      disabled={disabled}
-    />
-  );
-
   return (
-    <Autocomplete
-      options={polarisOptions}
-      selected={selectedValue}
-      onSelect={(selected) => {
-        const v = selected?.[0];
-        if (!v) {
-          onChange(null);
-          return;
-        }
-        const [namespace, key, type] = v.split("|||");
-        onChange({ namespace, key, type });
-        setInputValue(`${namespace}.${key}`);
-      }}
-      textField={textField}
-      loading={loading}
-      willLoadMoreResults={hasNext}
-      onLoadMoreResults={loadMore}
-      emptyState={inputValue.trim() ? `No metafield keys found for "${inputValue.trim()}".` : "No metafield keys found."}
-    />
+    <BlockStack gap="200">
+      <Button
+        variant="plain"
+        icon={isOpen ? ChevronUpIcon : ChevronDownIcon}
+        onClick={onToggle}
+        textAlign="left"
+        disabled={disabled}
+      >
+        {label}
+      </Button>
+      <Collapsible open={isOpen}>
+        <BlockStack gap="200">
+          <TextField
+            placeholder="Search namespace or key..."
+            value={inputValue}
+            onChange={onInputChange}
+            disabled={disabled || loading}
+          />
+          {polarisChoices.length > 0 ? (
+            <ChoiceList
+              titleHidden
+              allowMultiple
+              choices={polarisChoices}
+              selected={selected}
+              onChange={onChange}
+              disabled={disabled || loading}
+            />
+          ) : (
+            <div style={{ padding: "12px", fontSize: "14px", color: "#666" }}>
+              {loading ? "Loading..." : inputValue.trim() ? `No metafield keys found for "${inputValue.trim()}".` : "No metafield keys found."}
+            </div>
+          )}
+          {hasNext && (
+            <Button
+              onClick={loadMore}
+              disabled={loading || !hasNext}
+              variant="plain"
+              size="slim"
+            >
+              {loading ? "Loading..." : "Load more"}
+            </Button>
+          )}
+        </BlockStack>
+      </Collapsible>
+    </BlockStack>
   );
 }

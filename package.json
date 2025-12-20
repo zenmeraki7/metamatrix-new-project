@@ -16,8 +16,10 @@
     "@shopify/app-bridge-utils": "^3.5.1",
     "@shopify/polaris": "^13.9.5",
     "@tanstack/react-virtual": "^3.13.13",
+    "bullmq": "^5.66.2",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "ioredis": "^5.8.2",
     "mongoose": "^9.0.2",
     "node-fetch": "^3.3.2",
     "zustand": "^5.0.9"

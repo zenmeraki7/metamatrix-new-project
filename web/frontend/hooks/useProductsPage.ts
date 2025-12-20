@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { ProductSummary } from "../../frontend/types/product";
 
 type Direction = "next" | "prev";
@@ -15,87 +15,42 @@ interface ProductsResponse {
   pageInfo: PageInfo;
 }
 
-export function useProductsPage(filterDsl?: any) {
+export function useProductsPage() {
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-     const isFirstLoad = useRef(true); // ✅ HERE
+  const fetchPage = useCallback(async (direction: Direction) => {
+    setIsLoading(true);
 
-  const fetchPage = useCallback(
-    async (direction: Direction) => {
-      setIsLoading(true);
+    const params = new URLSearchParams();
+    params.set("direction", direction);
+    if (cursor) params.set("cursor", cursor);
 
-      const hasFilters = filterDsl?.and?.length > 0;
+    try {
+      const res = await fetch(`/api/products?${params.toString()}`, {
+  credentials: "include",
+});
 
-      try {
-        let res: Response;
+      if (!res.ok) throw new Error("Failed to fetch");
 
-        if (hasFilters) {
-          res = await fetch("/api/products/search", {
-            method: "POST",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              filterDsl,
-              limit: 50,
-            }),
-          });
-        } else {
-          const params = new URLSearchParams();
-          params.set("direction", direction);
-          if (cursor) params.set("cursor", cursor);
+      const data: ProductsResponse = await res.json();
+      console.log("Fetched products:", data.products);
 
-          res = await fetch(`/api/products?${params.toString()}`, {
-            credentials: "include",
-          });
-        }
+      setProducts(data.products);
+      setPageInfo(data.pageInfo);
+      setCursor(direction === "next" ? data.pageInfo.endCursor : data.pageInfo.startCursor);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [cursor]);
 
-        if (!res.ok) throw new Error("Failed to fetch");
-
-        const data: ProductsResponse = await res.json();
-
-        setProducts(data.products);
-        setPageInfo(data.pageInfo);
-
-        if (!hasFilters) {
-          setCursor(
-            direction === "next"
-              ? data.pageInfo.endCursor
-              : data.pageInfo.startCursor
-          );
-        }
-      } catch (err) {
-        console.error("Error fetching products:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [cursor, filterDsl]
-  );
-
-  // ✅ Initial load (no filters)
-useEffect(() => {
-  setCursor(null);
-  fetchPage("next");
-}, [filterDsl, fetchPage]); // ✅ MUST include fetchPage
-
-
-  // ✅ THIS IS THE ONE YOU ASKED ABOUT
-  // Reset pagination when filters change
   useEffect(() => {
-    setCursor(null);
     fetchPage("next");
-  }, [filterDsl]); // 👈 HERE
+  }, [fetchPage]);
 
-  return {
-    products,
-    pageInfo,
-    isLoading,
-    loadNext: () => fetchPage("next"),
-    loadPrev: () => fetchPage("prev"),
-  };
+  return { products, pageInfo, isLoading, loadNext: () => fetchPage("next"), loadPrev: () => fetchPage("prev") };
 }
-
-

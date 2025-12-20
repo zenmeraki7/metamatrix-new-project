@@ -92,10 +92,10 @@ function compileOperator(field, op, value) {
  * Metafields (SAFE)
  * ============================ */
 
-async function resolveMetafieldToProductIds(shopId, cond) {
+async function resolveMetafieldToProductIds(cond) {
   const { owner, namespace, key, type } = cond.meta;
 
-  const base = { shopId, ownerType: owner, namespace, key };
+  const base = {  ownerType: owner, namespace, key };
   if (type) base.type = type;
 
   // Step 1: get ownerIds safely (capped)
@@ -115,7 +115,7 @@ async function resolveMetafieldToProductIds(shopId, cond) {
 
   if (owner === "VARIANT") {
     const vRows = await Variant.aggregate([
-      { $match: { shopId, shopifyVariantId: { $in: ownerIds } } },
+      { $match: { shopifyVariantId: { $in: ownerIds } } },
       { $group: { _id: "$shopifyProductId" } },
       { $limit: MAX_PRODUCT_IDS }
     ]);
@@ -177,7 +177,7 @@ export async function compileFilter({ shopId, filter }) {
   // Inventory → Variant narrowing (SAFE)
   if (inventoryConditions.length) {
     const invRows = await InventoryLevel.aggregate([
-      { $match: { shopId, $and: inventoryConditions } },
+      { $match: {  $and: inventoryConditions } },
       { $group: { _id: "$inventoryItemId" } },
       { $limit: MAX_VARIANT_IDS }
     ]);
@@ -192,7 +192,7 @@ export async function compileFilter({ shopId, filter }) {
   // Variant → Product narrowing (SAFE)
   if (variantConditions.length) {
     const rows = await Variant.aggregate([
-      { $match: { shopId, $and: variantConditions } },
+      { $match: {  $and: variantConditions } },
       { $group: { _id: "$shopifyProductId" } },
       { $limit: MAX_PRODUCT_IDS }
     ]);
@@ -205,15 +205,15 @@ export async function compileFilter({ shopId, filter }) {
   }
 
   const productMatch = {
-    shopId,
+  
     ...(productConditions.length ? { $and: productConditions } : {}),
     ...(resolvedProductIds ? { shopifyProductId: { $in: resolvedProductIds } } : {}),
   };
 
   return {
     productMatch,
-    variantMatch: variantConditions.length ? { shopId, $and: variantConditions } : undefined,
-    inventoryMatch: inventoryConditions.length ? { shopId, $and: inventoryConditions } : undefined,
+    variantMatch: variantConditions.length ? { $and: variantConditions } : undefined,
+    inventoryMatch: inventoryConditions.length ? { $and: inventoryConditions } : undefined,
     resolvedProductIds,
   };
 }

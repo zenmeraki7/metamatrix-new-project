@@ -10,6 +10,9 @@ import shopify from "./shopify.js";
 import productCreator from "./product-creator.js";
 import PrivacyWebhookHandlers from "./privacy.js";
 import productsRouter from "./routes/products.js";
+import productWebhookRoutes from "./routes/webhooks.products.js";
+import { syncAllProducts } from './services/productSync.js';
+
 
 mongoose.set("bufferCommands", false);
 mongoose.set("strictQuery", true);
@@ -31,15 +34,22 @@ app.get(shopify.config.auth.path, shopify.auth.begin());
 app.get(
   shopify.config.auth.callbackPath,
   shopify.auth.callback(),
+  syncAllProducts,
   shopify.redirectToShopifyOrAppRoot()
+
 );
 app.post(
   shopify.config.webhooks.path,
   shopify.processWebhooks({ webhookHandlers: PrivacyWebhookHandlers })
 );
 
+
 // Parse JSON before any routes
 app.use(express.json());
+
+
+app.use("/webhooks", productWebhookRoutes);
+
 
 // ✅ APPLY AUTH MIDDLEWARE FIRST - protects all /api routes
 app.use("/api", shopify.validateAuthenticatedSession());
@@ -94,15 +104,9 @@ app.use("/", shopify.ensureInstalledOnShop(), async (_req, res, _next) => {
 
 async function startServer() {
   try {
-    const MONGO_URI = process.env.MONGO_URI;
+    const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/shopifyDB";
 
-    if (!MONGO_URI) {
-      throw new Error("MONGO_URI is not defined");
-    }
-
-    await mongoose.connect(MONGO_URI, {
-      autoIndex: false,
-    });
+    await mongoose.connect(MONGO_URI); // <-- no strictQuery, bufferCommands, or old options
 
     console.log("✅ MongoDB connected");
 
@@ -110,9 +114,10 @@ async function startServer() {
       console.log(`✅ Server listening on port ${PORT}`);
     });
   } catch (err) {
-    console.error("❌ Failed to start server:", err);
+    console.error("❌ Failed to start server!!!:", err);
     process.exit(1);
   }
 }
 
 startServer();
+

@@ -27,7 +27,7 @@ export async function queryProducts(req, res) {
     const filterDsl = req.body?.filter || null;
 
     // ✅ SAFE FILTER COMPILATION
-    let baseQuery = {  };
+    let baseQuery = { };
 
     if (filterDsl) {
       const compiled = await compileFilter({
@@ -37,6 +37,59 @@ export async function queryProducts(req, res) {
 
       baseQuery = compiled.productMatch;
     }
+
+    // 🔍 DEBUGGING: Check what's actually in the database
+    console.log("\n=== DEBUG INFO ===");
+    console.log("1. Base query:", JSON.stringify(baseQuery, null, 2));
+    
+    // Check total products in shop
+    const totalProducts = await Product.countDocuments({  });
+    console.log("2. Total products in shop:", totalProducts);
+    
+    // Check products matching without filters
+    const noFilterCount = await Product.countDocuments({  });
+    console.log("3. Products without filter:", noFilterCount);
+    
+    // Check if totalInventory field exists
+    const hasInventoryField = await Product.countDocuments({ 
+      
+      totalInventory: { $exists: true }
+    });
+    console.log("4. Products with totalInventory field:", hasInventoryField);
+    
+    // Check totalInventory values distribution
+    const inventoryDistribution = await Product.aggregate([
+      { $match: {  } },
+      { $group: { 
+        _id: "$totalInventory",
+        count: { $sum: 1 }
+      }},
+      { $sort: { _id: 1 } },
+      { $limit: 10 }
+    ]);
+    console.log("5. Inventory distribution (first 10):", inventoryDistribution);
+    
+    // Check if null/undefined values exist
+    const nullInventory = await Product.countDocuments({ 
+      
+      $or: [
+        { totalInventory: null },
+        { totalInventory: { $exists: false } }
+      ]
+    });
+    console.log("6. Products with null/missing totalInventory:", nullInventory);
+    
+    // Test the exact query
+    const testMatch = await Product.countDocuments(baseQuery);
+    console.log("7. Products matching your query:", testMatch);
+    
+    // Sample products to see data structure
+    const sampleProducts = await Product.find({  })
+      .select({ shopifyProductId: 1, title: 1, status: 1, totalInventory: 1 })
+      .limit(3)
+      .lean();
+    console.log("8. Sample products:", JSON.stringify(sampleProducts, null, 2));
+    console.log("=== END DEBUG ===\n");
 
     // Cursor handling
     const decoded = decodeCursor(cursor);
@@ -49,7 +102,6 @@ export async function queryProducts(req, res) {
       pageQuery[SORT_FIELD] =
         direction === "next" ? { $gt: lastId } : { $lt: lastId };
     }
-  console.log("pagequery!!!!",pageQuery);
 
     const docs = await Product.find(pageQuery)
       .select(pickFields())
@@ -86,6 +138,6 @@ export async function queryProducts(req, res) {
     });
   } catch (err) {
     console.error("❌ Product query failed:", err);
-    res.status(500).json({ error: "Product query failed" });
+    res.status(500).json({ error: "Product query failed", details: err.message });
   }
 }

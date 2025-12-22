@@ -1,10 +1,4 @@
-// services/filterCompiler.js (DROP-IN SAFE VERSION)
-// Key changes:
-// 1) NO distinct() on Variant / Inventory hot paths
-// 2) Aggregation + hard limits
-// 3) Early exits for impossible filters
-// 4) Safer metafield resolution
-
+// services/filterCompiler.js (FIXED VERSION)
 import { Types } from "mongoose";
 import { Product, Variant, InventoryLevel, Metafield } from "../models/index.js";
 
@@ -12,7 +6,7 @@ import { Product, Variant, InventoryLevel, Metafield } from "../models/index.js"
  * Constants / Safety limits
  * ============================ */
 
-const MAX_PRODUCT_IDS = 5000;   // hard cap to prevent memory blowups
+const MAX_PRODUCT_IDS = 5000;
 const MAX_VARIANT_IDS = 10000;
 
 /* ============================
@@ -56,7 +50,6 @@ function escapeRegex(input) {
 }
 
 function normalizeRange(op, value) {
-  // gte + lte with same value => eq
   if (Array.isArray(value) && value.length === 2 && value[0] === value[1]) {
     return { op: "eq", value: value[0] };
   }
@@ -68,14 +61,41 @@ function compileOperator(field, op, value) {
   op = norm.op;
   value = norm.value;
 
+  // Special handling for numeric fields that might be null
+  const isNumericField = ['totalInventory', 'variantCount', 'price', 'compareAtPrice', 'cost', 'available'].includes(field);
+  
   switch (op) {
-    case "eq": return { [field]: value };
+    case "eq": 
+      if (isNumericField && value === 0) {
+        // Match both 0 and null for zero comparisons
+        return { $or: [{ [field]: 0 }, { [field]: null }, { [field]: { $exists: false } }] };
+      }
+      return { [field]: value };
     case "neq": return { [field]: { $ne: value } };
     case "gt": return { [field]: { $gt: value } };
-    case "gte": return { [field]: { $gte: value } };
+    case "gte": 
+      if (isNumericField && value === 0) {
+        // For >= 0, include null values (treat as 0)
+        return { $or: [{ [field]: { $gte: 0 } }, { [field]: null }, { [field]: { $exists: false } }] };
+      }
+      return { [field]: { $gte: value } };
     case "lt": return { [field]: { $lt: value } };
-    case "lte": return { [field]: { $lte: value } };
-    case "between": return { [field]: { $gte: value[0], $lte: value[1] } };
+    case "lte":
+      if (isNumericField && value === 0) {
+        // For <= 0, include null values (treat as 0) and negative numbers
+        return { $or: [{ [field]: { $lte: 0 } }, { [field]: null }, { [field]: { $exists: false } }] };
+      }
+      return { [field]: { $lte: value } };
+    case "between": 
+      if (isNumericField && value[0] <= 0 && value[1] >= 0) {
+        // Range includes 0, so include nulls
+        return { $or: [
+          { [field]: { $gte: value[0], $lte: value[1] } },
+          { [field]: null },
+          { [field]: { $exists: false } }
+        ]};
+      }
+      return { [field]: { $gte: value[0], $lte: value[1] } };
     case "contains": return { [field]: { $regex: escapeRegex(value), $options: "i" } };
     case "not_contains": return { [field]: { $not: { $regex: escapeRegex(value), $options: "i" } } };
     case "starts_with": return { [field]: { $regex: `^${escapeRegex(value)}`, $options: "i" } };
@@ -89,16 +109,60 @@ function compileOperator(field, op, value) {
 }
 
 /* ============================
+ * NEW: Merge conditions helper
+ * ============================ */
+
+function mergeConditions(conditions) {
+  const merged = {};
+  const nonMergeable = [];
+
+  for (const cond of conditions) {
+    // Handle special cases that shouldn't be merged
+    if (cond.$or || cond.$nor || cond.$not || cond.__meta) {
+      nonMergeable.push(cond);
+      continue;
+    }
+
+    // Merge field conditions
+    for (const [field, value] of Object.entries(cond)) {
+      if (!merged[field]) {
+        merged[field] = value;
+      } else {
+        // Merge operators on the same field
+        if (typeof value === 'object' && !Array.isArray(value) && value !== null &&
+            typeof merged[field] === 'object' && !Array.isArray(merged[field]) && merged[field] !== null) {
+          merged[field] = { ...merged[field], ...value };
+        } else {
+          // Can't merge, push to non-mergeable
+          nonMergeable.push({ [field]: value });
+        }
+      }
+    }
+  }
+
+  const result = [];
+  
+  // Add merged conditions
+  for (const [field, value] of Object.entries(merged)) {
+    result.push({ [field]: value });
+  }
+  
+  // Add non-mergeable conditions
+  result.push(...nonMergeable);
+
+  return result;
+}
+
+/* ============================
  * Metafields (SAFE)
  * ============================ */
 
 async function resolveMetafieldToProductIds(cond) {
   const { owner, namespace, key, type } = cond.meta;
 
-  const base = {  ownerType: owner, namespace, key };
+  const base = { ownerType: owner, namespace, key };
   if (type) base.type = type;
 
-  // Step 1: get ownerIds safely (capped)
   const rows = await Metafield.aggregate([
     { $match: base },
     { $group: { _id: "$ownerId" } },
@@ -108,7 +172,6 @@ async function resolveMetafieldToProductIds(cond) {
   const ownerIds = rows.map(r => r._id);
   if (!ownerIds.length) return [];
 
-  // Step 2: map to products if needed
   if (owner === "PRODUCT") {
     return ownerIds.slice(0, MAX_PRODUCT_IDS);
   }
@@ -162,7 +225,7 @@ function splitConditions(node, product, variant, inventory) {
 }
 
 /* ============================
- * Main entry
+ * Main entry (FIXED)
  * ============================ */
 
 export async function compileFilter({ shopId, filter }) {
@@ -176,8 +239,9 @@ export async function compileFilter({ shopId, filter }) {
 
   // Inventory → Variant narrowing (SAFE)
   if (inventoryConditions.length) {
+    const merged = mergeConditions(inventoryConditions);
     const invRows = await InventoryLevel.aggregate([
-      { $match: {  $and: inventoryConditions } },
+      { $match: merged.length === 1 ? merged[0] : { $and: merged } },
       { $group: { _id: "$inventoryItemId" } },
       { $limit: MAX_VARIANT_IDS }
     ]);
@@ -191,8 +255,9 @@ export async function compileFilter({ shopId, filter }) {
 
   // Variant → Product narrowing (SAFE)
   if (variantConditions.length) {
+    const merged = mergeConditions(variantConditions);
     const rows = await Variant.aggregate([
-      { $match: {  $and: variantConditions } },
+      { $match: merged.length === 1 ? merged[0] : { $and: merged } },
       { $group: { _id: "$shopifyProductId" } },
       { $limit: MAX_PRODUCT_IDS }
     ]);
@@ -204,16 +269,22 @@ export async function compileFilter({ shopId, filter }) {
     }
   }
 
+  // ✅ MERGE PRODUCT CONDITIONS
+  const mergedProductConditions = mergeConditions(productConditions);
+
   const productMatch = {
-  
-    ...(productConditions.length ? { $and: productConditions } : {}),
+    ...(mergedProductConditions.length === 1 
+      ? mergedProductConditions[0] 
+      : mergedProductConditions.length > 1 
+        ? { $and: mergedProductConditions } 
+        : {}),
     ...(resolvedProductIds ? { shopifyProductId: { $in: resolvedProductIds } } : {}),
   };
 
   return {
     productMatch,
-    variantMatch: variantConditions.length ? { $and: variantConditions } : undefined,
-    inventoryMatch: inventoryConditions.length ? { $and: inventoryConditions } : undefined,
+    variantMatch: variantConditions.length ? { $and: mergeConditions(variantConditions) } : undefined,
+    inventoryMatch: inventoryConditions.length ? { $and: mergeConditions(inventoryConditions) } : undefined,
     resolvedProductIds,
   };
 }

@@ -255,15 +255,15 @@ export default function ProductsPage() {
 
       setItems(
         data.items.map((p: any) => ({
-          shopifyProductId: p.id,
+          shopifyProductId: p.shopifyProductId,
           title: p.title,
           status: p.status,
           vendor: p.vendor,
           productType: p.productType,
           totalInventory: p.totalInventory,
           featuredMedia: {
-            url: p.image?.url,
-            alt: p.image?.altText,
+            url: p.featuredMedia?.url,
+            alt: p.featuredMedia?.alt,
           },
         }))
       );
@@ -283,11 +283,18 @@ export default function ProductsPage() {
 
   /* ---------------- handlers ---------------- */
 
-  const onSearchChange = useCallback((val: string) => {
-    setQ(val);
-    if (qDebounceRef.current) clearTimeout(qDebounceRef.current);
-    qDebounceRef.current = window.setTimeout(fetchProducts, 300);
-  }, [fetchProducts]);
+  const onSearchChange = useCallback(
+    (val: string) => {
+      setQ(val);
+      if (qDebounceRef.current) clearTimeout(qDebounceRef.current);
+      qDebounceRef.current = window.setTimeout(() => {
+        // Reset to first page on search
+        setCursor(null);
+        setDirection("next");
+      }, 300);
+    },
+    []
+  );
 
   const applyDraft = () => {
     setApplied(draft);
@@ -304,123 +311,248 @@ export default function ProductsPage() {
 
   return (
     <Page title="Products">
-      <Card>
-        <Box padding="300">
-          <InlineStack gap="300" align="space-between">
-            <TextField
-              label="Search"
-              labelHidden
-              value={q}
-              onChange={onSearchChange}
-              placeholder="Search products"
-            />
+      <BlockStack gap="500">
+        {/* Top Bar - Search & Filters */}
+        <Card>
+          <Box padding="300">
+            <InlineStack gap="300" align="space-between">
+              <div style={{ flex: 1, maxWidth: "400px" }}>
+                <TextField
+                  label="Search"
+                  labelHidden
+                  value={q}
+                  onChange={onSearchChange}
+                  placeholder="Search products by title or handle"
+                  autoComplete="off"
+                />
+              </div>
 
-            <Popover
-              active={filtersOpen}
-              onClose={() => setFiltersOpen(false)}
-              activator={
-                <Button onClick={() => setFiltersOpen((v) => !v)}>
-                  Filters{appliedCount ? ` (${appliedCount})` : ""}
-                </Button>
-              }
-            >
-              <Box padding="300" width="420px">
-                <BlockStack gap="300">
-                  <StatusFilter
-                    isOpen={!!openSection.status}
-                    onToggle={() => toggleSection("status")}
-                    selected={draft.status}
-                    onChange={(v) => setDraft((p) => ({ ...p, status: v }))}
-                  />
-
-                  <Divider />
-
-                  <VendorFilter
-                    isOpen={!!openSection.vendor}
-                    onToggle={() => toggleSection("vendor")}
-                    value={draft.vendor}
-                    onChange={(v) => setDraft((p) => ({ ...p, vendor: v }))}
-                  />
-
-                  <Divider />
-
-                  <InlineStack align="end" gap="200">
-                    <Button onClick={clearAll}>Clear</Button>
-                    <Button variant="primary" onClick={applyDraft}>
-                      Apply
+              <InlineStack gap="200" align="end">
+                <Popover
+                  active={filtersOpen}
+                  onClose={() => setFiltersOpen(false)}
+                  activator={
+                    <Button onClick={() => setFiltersOpen((v) => !v)}>
+                      Filters{appliedCount ? ` (${appliedCount})` : ""}
                     </Button>
-                  </InlineStack>
-                </BlockStack>
-              </Box>
-            </Popover>
+                  }
+                >
+                  <Box padding="300" width="420px">
+                    <BlockStack gap="300">
+                      {/* Status Filter */}
+                      <StatusFilter
+                        isOpen={!!openSection.status}
+                        onToggle={() => toggleSection("status")}
+                        selected={draft.status}
+                        onChange={(v) => setDraft((p) => ({ ...p, status: v }))}
+                      />
 
-            {loading && <Spinner size="small" />}
-          </InlineStack>
-        </Box>
+                      <Divider />
 
-        <Divider />
+                      {/* Vendor Filter */}
+                      <VendorFilter
+                        isOpen={!!openSection.vendor}
+                        onToggle={() => toggleSection("vendor")}
+                        value={draft.vendor}
+                        onChange={(v) => setDraft((p) => ({ ...p, vendor: v }))}
+                      />
 
-        {loading ? (
-          <Box padding="500">
-            <InlineStack align="center">
-              <Spinner size="large" />
+                      <Divider />
+
+                      {/* Product Type Filter */}
+                      <ProductTypeFilter
+                        isOpen={!!openSection.productType}
+                        onToggle={() => toggleSection("productType")}
+                        value={draft.productType}
+                        onChange={(v) => setDraft((p) => ({ ...p, productType: v }))}
+                      />
+
+                      <Divider />
+
+                      {/* Tag Filter */}
+                      <TagPicker
+                        isOpen={!!openSection.tag}
+                        onToggle={() => toggleSection("tag")}
+                        value={draft.tag}
+                        onChange={(v) => setDraft((p) => ({ ...p, tag: v }))}
+                      />
+
+                      <Divider />
+
+                      {/* Collection Filter */}
+                      <CollectionFilter
+                        isOpen={!!openSection.collection}
+                        onToggle={() => toggleSection("collection")}
+                        value={draft.collectionId}
+                        onChange={(v) => setDraft((p) => ({ ...p, collectionId: v }))}
+                      />
+
+                      <Divider />
+
+                      {/* Inventory Filter */}
+                      <InventoryFilter
+                        isOpen={!!openSection.inventory}
+                        onToggle={() => toggleSection("inventory")}
+                        min={draft.inventoryMin}
+                        max={draft.inventoryMax}
+                        onMinChange={(v) => setDraft((p) => ({ ...p, inventoryMin: v }))}
+                        onMaxChange={(v) => setDraft((p) => ({ ...p, inventoryMax: v }))}
+                      />
+
+                      <Divider />
+
+                      {/* Variant Filter */}
+                      <VariantFilter
+                        isOpen={!!openSection.variant}
+                        onToggle={() => toggleSection("variant")}
+                        sku={draft.variantSku}
+                        priceMin={draft.variantPriceMin}
+                        priceMax={draft.variantPriceMax}
+                        onSkuChange={(v) => setDraft((p) => ({ ...p, variantSku: v }))}
+                        onPriceMinChange={(v) => setDraft((p) => ({ ...p, variantPriceMin: v }))}
+                        onPriceMaxChange={(v) => setDraft((p) => ({ ...p, variantPriceMax: v }))}
+                      />
+
+                      <Divider />
+
+                      {/* Metafield Filter */}
+                      <MetafieldKeyPicker
+                        isOpen={!!openSection.metafield}
+                        onToggle={() => toggleSection("metafield")}
+                        owner={draft.mfOwner}
+                        namespace={draft.mfNamespace}
+                        mfKey={draft.mfKey}
+                        type={draft.mfType}
+                        operator={draft.mfOp}
+                        value={draft.mfValue}
+                        onOwnerChange={(v) => setDraft((p) => ({ ...p, mfOwner: v }))}
+                        onNamespaceChange={(v) => setDraft((p) => ({ ...p, mfNamespace: v }))}
+                        onKeyChange={(v) => setDraft((p) => ({ ...p, mfKey: v }))}
+                        onTypeChange={(v) => setDraft((p) => ({ ...p, mfType: v }))}
+                        onOperatorChange={(v) => setDraft((p) => ({ ...p, mfOp: v }))}
+                        onValueChange={(v) => setDraft((p) => ({ ...p, mfValue: v }))}
+                      />
+
+                      <Divider />
+
+                      {/* Action Buttons */}
+                      <InlineStack align="end" gap="200">
+                        <Button onClick={clearAll}>Clear All</Button>
+                        <Button variant="primary" onClick={applyDraft}>
+                          Apply Filters
+                        </Button>
+                      </InlineStack>
+                    </BlockStack>
+                  </Box>
+                </Popover>
+
+                {loading && <Spinner size="small" />}
+              </InlineStack>
             </InlineStack>
           </Box>
-        ) : (
-          <IndexTable
-            resourceName={{ singular: "product", plural: "products" }}
-            itemCount={items.length}
-            headings={[
-              { title: "Product" },
-              { title: "Status" },
-              { title: "Vendor" },
-              { title: "Inventory" },
-            ]}
-          >
-            {items.map((p, i) => (
-              <IndexTable.Row
-                id={p.shopifyProductId}
-                key={p.shopifyProductId}
-                position={i}
-              >
-                <IndexTable.Cell>
-                  <InlineStack gap="300">
-                    <Thumbnail
-                      source={p.featuredMedia?.url || ""}
-                      alt={p.title}
-                    />
-                    <Text>{p.title}</Text>
-                  </InlineStack>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <Badge tone={p.status === "ACTIVE" ? "success" : "attention"}>
-                    {p.status}
-                  </Badge>
-                </IndexTable.Cell>
-                <IndexTable.Cell>{p.vendor || "-"}</IndexTable.Cell>
-                <IndexTable.Cell>{p.totalInventory ?? "-"}</IndexTable.Cell>
-              </IndexTable.Row>
-            ))}
-          </IndexTable>
-        )}
+        </Card>
 
-        <Box padding="300">
-          <InlineStack align="end">
-            <Pagination
-              hasPrevious={!!prevCursor}
-              hasNext={!!nextCursor}
-              onPrevious={() => {
-                setDirection("prev");
-                setCursor(prevCursor);
-              }}
-              onNext={() => {
-                setDirection("next");
-                setCursor(nextCursor);
-              }}
-            />
-          </InlineStack>
-        </Box>
-      </Card>
+        {/* Product List */}
+        <Card padding="0">
+          {loading && items.length === 0 ? (
+            <Box padding="500">
+              <InlineStack align="center">
+                <Spinner size="large" />
+              </InlineStack>
+            </Box>
+          ) : items.length > 0 ? (
+            <IndexTable
+              resourceName={{ singular: "product", plural: "products" }}
+              itemCount={items.length}
+              headings={[
+                { title: "Product" },
+                { title: "Status" },
+                { title: "Vendor" },
+                { title: "Type" },
+                { title: "Inventory" },
+              ]}
+              selectable={false}
+            >
+              {items.map((p, i) => (
+                <IndexTable.Row
+                  id={p.shopifyProductId}
+                  key={p.shopifyProductId}
+                  position={i}
+                >
+                  <IndexTable.Cell>
+                    <InlineStack gap="300" blockAlign="center">
+                      <Thumbnail
+                        source={p.featuredMedia?.url || ""}
+                        alt={p.featuredMedia?.alt || p.title}
+                        size="small"
+                      />
+                      <Text as="span" variant="bodyMd" fontWeight="semibold">
+                        {p.title}
+                      </Text>
+                    </InlineStack>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Badge
+                      tone={
+                        p.status === "ACTIVE"
+                          ? "success"
+                          : p.status === "DRAFT"
+                          ? "info"
+                          : "warning"
+                      }
+                    >
+                      {p.status}
+                    </Badge>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Text as="span" variant="bodyMd">
+                      {p.vendor || "-"}
+                    </Text>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Text as="span" variant="bodyMd">
+                      {p.productType || "-"}
+                    </Text>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Text as="span" variant="bodyMd">
+                      {p.totalInventory ?? "-"}
+                    </Text>
+                  </IndexTable.Cell>
+                </IndexTable.Row>
+              ))}
+            </IndexTable>
+          ) : (
+            <Box padding="500">
+              <InlineStack align="center">
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  No products found
+                </Text>
+              </InlineStack>
+            </Box>
+          )}
+        </Card>
+
+        {/* Pagination */}
+        <Card>
+          <Box padding="300">
+            <InlineStack align="end">
+              <Pagination
+                hasPrevious={!!prevCursor}
+                hasNext={!!nextCursor}
+                onPrevious={() => {
+                  setDirection("prev");
+                  setCursor(prevCursor);
+                }}
+                onNext={() => {
+                  setDirection("next");
+                  setCursor(nextCursor);
+                }}
+              />
+            </InlineStack>
+          </Box>
+        </Card>
+      </BlockStack>
     </Page>
   );
 }

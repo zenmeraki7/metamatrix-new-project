@@ -7,7 +7,7 @@ import {
 } from "@shopify/polaris";
 import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
-type ProductTypeFilterProps = {
+type BarcodeFilterProps = {
   isOpen: boolean;
   onToggle: () => void;
   operator: string;
@@ -38,14 +38,14 @@ const OPERATORS = [
   { label: "contains (case insensitive)", value: "contains_ci" },
 ];
 
-export function ProductTypeFilter({
+export default function BarcodeFilter({
   isOpen,
   onToggle,
   operator,
   value,
   onOperatorChange,
   onValueChange,
-}: ProductTypeFilterProps) {
+}: BarcodeFilterProps) {
   const hideValueInput =
     operator === "is_blank" || operator === "is_not_blank";
 
@@ -57,7 +57,7 @@ export function ProductTypeFilter({
         onClick={onToggle}
         textAlign="left"
       >
-        Product Type
+        Barcode
       </Button>
 
       <Collapsible open={isOpen}>
@@ -71,7 +71,7 @@ export function ProductTypeFilter({
 
           {!hideValueInput && (
             <TextField
-              label="Product type"
+              label="Barcode"
               value={value}
               onChange={onValueChange}
               autoComplete="off"

@@ -2,12 +2,12 @@ import {
   BlockStack,
   Button,
   Collapsible,
-  Select,
   TextField,
+  Select,
 } from "@shopify/polaris";
 import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
-type ProductTypeFilterProps = {
+type HandleProps = {
   isOpen: boolean;
   onToggle: () => void;
   operator: string;
@@ -38,16 +38,17 @@ const OPERATORS = [
   { label: "contains (case insensitive)", value: "contains_ci" },
 ];
 
-export function ProductTypeFilter({
+const NO_VALUE_OPERATORS = ["is_blank", "is_not_blank"];
+
+export default function HandleFilter({
   isOpen,
   onToggle,
   operator,
   value,
   onOperatorChange,
   onValueChange,
-}: ProductTypeFilterProps) {
-  const hideValueInput =
-    operator === "is_blank" || operator === "is_not_blank";
+}: HandleProps) {
+  const needsValue = !NO_VALUE_OPERATORS.includes(operator);
 
   return (
     <BlockStack gap="200">
@@ -57,7 +58,7 @@ export function ProductTypeFilter({
         onClick={onToggle}
         textAlign="left"
       >
-        Product Type
+        Handle
       </Button>
 
       <Collapsible open={isOpen}>
@@ -69,9 +70,9 @@ export function ProductTypeFilter({
             onChange={onOperatorChange}
           />
 
-          {!hideValueInput && (
+          {needsValue && (
             <TextField
-              label="Product type"
+              label="Handle"
               value={value}
               onChange={onValueChange}
               autoComplete="off"

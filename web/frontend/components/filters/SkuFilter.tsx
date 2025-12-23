@@ -7,14 +7,7 @@ import {
 } from "@shopify/polaris";
 import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
-type ProductTypeFilterProps = {
-  isOpen: boolean;
-  onToggle: () => void;
-  operator: string;
-  value: string;
-  onOperatorChange: (value: string) => void;
-  onValueChange: (value: string) => void;
-};
+/* ---------------- operators ---------------- */
 
 const OPERATORS = [
   { label: "equals", value: "equals" },
@@ -38,15 +31,30 @@ const OPERATORS = [
   { label: "contains (case insensitive)", value: "contains_ci" },
 ];
 
-export function ProductTypeFilter({
+/* ---------------- props ---------------- */
+
+type SkuFilterProps = {
+  isOpen: boolean;
+  onToggle: () => void;
+
+  operator: string;
+  onOperatorChange: (value: string) => void;
+
+  value: string;
+  onValueChange: (value: string) => void;
+};
+
+/* ---------------- component ---------------- */
+
+export function SkuFilter({
   isOpen,
   onToggle,
   operator,
-  value,
   onOperatorChange,
+  value,
   onValueChange,
-}: ProductTypeFilterProps) {
-  const hideValueInput =
+}: SkuFilterProps) {
+  const isValueDisabled =
     operator === "is_blank" || operator === "is_not_blank";
 
   return (
@@ -57,28 +65,32 @@ export function ProductTypeFilter({
         onClick={onToggle}
         textAlign="left"
       >
-        Product Type
+        SKU
       </Button>
 
       <Collapsible open={isOpen}>
         <BlockStack gap="200">
           <Select
-            label="Condition"
+            label="Operator"
             options={OPERATORS}
             value={operator}
             onChange={onOperatorChange}
           />
 
-          {!hideValueInput && (
-            <TextField
-              label="Product type"
-              value={value}
-              onChange={onValueChange}
-              autoComplete="off"
-            />
-          )}
+          <TextField
+            label="SKU value"
+            value={value}
+            onChange={onValueChange}
+            autoComplete="off"
+            disabled={isValueDisabled}
+            placeholder={
+              isValueDisabled ? "No value required" : "Enter SKU"
+            }
+          />
         </BlockStack>
       </Collapsible>
     </BlockStack>
   );
 }
+
+export default SkuFilter;

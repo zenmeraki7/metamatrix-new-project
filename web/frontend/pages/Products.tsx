@@ -27,6 +27,16 @@ import { CollectionFilter } from "../components/filters/CollectionFilter";
 import { InventoryFilter } from "../components/filters/InventoryFilter";
 import { VariantFilter } from "../components/filters/VariantFilter";
 import { MetafieldKeyPicker } from "../components/filters/MetafieldKeyPicker";
+import Price from "../components/filters/Price";
+import Barcode from "../components/filters/Barcode";
+import ProductTitle from "../components/filters/ProductTitle";
+import Handle from "../components/filters/Handle";
+import Description from "../components/filters/Description";
+import SkuFilter from "../components/filters/SkuFilter";
+import DateFilter, { DateOperator } from "../components/filters/DateFilter";
+import DatePublished from "../components/filters/DatePublished";
+import DateUpdated from "../components/filters/DateUpdated";
+import DateCreated from "../components/filters/DateCreated";
 
 /* ---------------- types ---------------- */
 
@@ -68,6 +78,50 @@ const DEFAULT_FILTERS = {
   variantSku: "",
   variantPriceMin: "",
   variantPriceMax: "",
+
+  dateCreatedOperator: "is_after" as DateOperator,
+  dateCreatedValue: "",
+  dateCreatedDays: "",
+
+  dateUpdatedOperator: "is_after" as DateOperator,
+  dateUpdatedValue: "",
+  dateUpdatedDays: "",
+
+  datePublishedOperator: "is_after" as DateOperator,
+  datePublishedValue: "",
+  datePublishedDays: "",
+  /* product title */
+  productTitleOperator: "contains",
+  productTitleValue: "",
+
+  /* handle */
+  handleOperator: "contains",
+  handleValue: "",
+
+  /* description */
+  descriptionOperator: "contains",
+  descriptionValue: "",
+
+  /* product type */
+  productTypeOp: "contains",
+  productTypeValue: "",
+
+  /* collection */
+  collectionOp: "is",
+  collectionValue: "",
+
+  /* price */
+  priceOperator: "eq",
+  priceValue: "",
+
+  /* barcode */
+  barcodeOp: "contains",
+  barcodeValue: "",
+
+  skuOperator: "contains",
+  skuValue: "",
+
+  /* metafields */
   mfOwner: "PRODUCT" as MetafieldOwner,
   mfNamespace: "",
   mfKey: "",
@@ -100,10 +154,7 @@ export default function ProductsPage() {
 
   const [openSection, setOpenSection] = useState<Record<string, boolean>>({});
 
-  const appliedCount = useMemo(
-    () => countAppliedFilters(applied),
-    [applied]
-  );
+  const appliedCount = useMemo(() => countAppliedFilters(applied), [applied]);
 
   const toggleSection = (key: string) => {
     setOpenSection((p) => ({ ...p, [key]: !p[key] }));
@@ -283,18 +334,15 @@ export default function ProductsPage() {
 
   /* ---------------- handlers ---------------- */
 
-  const onSearchChange = useCallback(
-    (val: string) => {
-      setQ(val);
-      if (qDebounceRef.current) clearTimeout(qDebounceRef.current);
-      qDebounceRef.current = window.setTimeout(() => {
-        // Reset to first page on search
-        setCursor(null);
-        setDirection("next");
-      }, 300);
-    },
-    []
-  );
+  const onSearchChange = useCallback((val: string) => {
+    setQ(val);
+    if (qDebounceRef.current) clearTimeout(qDebounceRef.current);
+    qDebounceRef.current = window.setTimeout(() => {
+      // Reset to first page on search
+      setCursor(null);
+      setDirection("next");
+    }, 300);
+  }, []);
 
   const applyDraft = () => {
     setApplied(draft);
@@ -327,16 +375,26 @@ export default function ProductsPage() {
                 />
               </div>
 
-              <InlineStack gap="200" align="end">
-                <Popover
-                  active={filtersOpen}
-                  onClose={() => setFiltersOpen(false)}
-                  activator={
-                    <Button onClick={() => setFiltersOpen((v) => !v)}>
-                      Filters{appliedCount ? ` (${appliedCount})` : ""}
-                    </Button>
-                  }
-                >
+             <InlineStack gap="200" align="end">
+  {/* Filters button */}
+   {/* Clear Filters Button */}
+  {appliedCount > 0 && (
+    <Button tone="critical" onClick={clearAll}>
+      Clear filters
+    </Button>
+  )}
+
+  {/* Filters button */}
+  <Popover
+    active={filtersOpen}
+    onClose={() => setFiltersOpen(false)}
+    activator={
+      <Button onClick={() => setFiltersOpen((v) => !v)}>
+        Filters{appliedCount ? ` (${appliedCount})` : ""}
+      </Button>
+    }
+  >
+
                   <Box padding="300" width="420px">
                     <BlockStack gap="300">
                       {/* Status Filter */}
@@ -347,6 +405,86 @@ export default function ProductsPage() {
                         onChange={(v) => setDraft((p) => ({ ...p, status: v }))}
                       />
 
+                      <Divider />
+
+                      <ProductTitle
+                        isOpen={!!openSection.productTitle}
+                        onToggle={() => toggleSection("productTitle")}
+                        operator={draft.productTitleOperator}
+                        value={draft.productTitleValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({ ...p, productTitleOperator: v }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, productTitleValue: v }))
+                        }
+                      />
+                      <Divider />
+                      <DateCreated
+                        isOpen={!!openSection.dateCreated}
+                        onToggle={() => toggleSection("dateCreated")}
+                        operator={draft.dateCreatedOperator}
+                        value={draft.dateCreatedValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({ ...p, dateCreatedOperator: v }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, dateCreatedValue: v }))
+                        }
+                      />
+                      <Divider />
+                      <DateUpdated
+                        isOpen={!!openSection.dateUpdated}
+                        onToggle={() => toggleSection("dateUpdated")}
+                        operator={draft.dateUpdatedOperator}
+                        value={draft.dateUpdatedValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({ ...p, dateUpdatedOperator: v }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, dateUpdatedValue: v }))
+                        }
+                      />
+                      <Divider />
+                      <DatePublished
+                        isOpen={!!openSection.datePublished}
+                        onToggle={() => toggleSection("datePublished")}
+                        operator={draft.datePublishedOperator}
+                        value={draft.datePublishedValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({ ...p, datePublishedOperator: v }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, datePublishedValue: v }))
+                        }
+                      />
+                      <Divider />
+                      <Handle
+                        isOpen={!!openSection.handle}
+                        onToggle={() => toggleSection("handle")}
+                        operator={draft.handleOperator}
+                        value={draft.handleValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({ ...p, handleOperator: v }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, handleValue: v }))
+                        }
+                      />
+                      <Divider />
+
+                      <Description
+                        isOpen={!!openSection.description}
+                        onToggle={() => toggleSection("description")}
+                        operator={draft.descriptionOperator}
+                        value={draft.descriptionValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({ ...p, descriptionOperator: v }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, descriptionValue: v }))
+                        }
+                      />
                       <Divider />
 
                       {/* Vendor Filter */}
@@ -363,8 +501,18 @@ export default function ProductsPage() {
                       <ProductTypeFilter
                         isOpen={!!openSection.productType}
                         onToggle={() => toggleSection("productType")}
-                        value={draft.productType}
-                        onChange={(v) => setDraft((p) => ({ ...p, productType: v }))}
+                        operator={draft.productTypeOp}
+                        value={draft.productTypeValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            productTypeOp: v,
+                            productTypeValue: "",
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, productTypeValue: v }))
+                        }
                       />
 
                       <Divider />
@@ -383,8 +531,18 @@ export default function ProductsPage() {
                       <CollectionFilter
                         isOpen={!!openSection.collection}
                         onToggle={() => toggleSection("collection")}
-                        value={draft.collectionId}
-                        onChange={(v) => setDraft((p) => ({ ...p, collectionId: v }))}
+                        operator={draft.collectionOp}
+                        value={draft.collectionValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            collectionOp: v,
+                            collectionValue: "",
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, collectionValue: v }))
+                        }
                       />
 
                       <Divider />
@@ -395,8 +553,12 @@ export default function ProductsPage() {
                         onToggle={() => toggleSection("inventory")}
                         min={draft.inventoryMin}
                         max={draft.inventoryMax}
-                        onMinChange={(v) => setDraft((p) => ({ ...p, inventoryMin: v }))}
-                        onMaxChange={(v) => setDraft((p) => ({ ...p, inventoryMax: v }))}
+                        onMinChange={(v) =>
+                          setDraft((p) => ({ ...p, inventoryMin: v }))
+                        }
+                        onMaxChange={(v) =>
+                          setDraft((p) => ({ ...p, inventoryMax: v }))
+                        }
                       />
 
                       <Divider />
@@ -408,9 +570,62 @@ export default function ProductsPage() {
                         sku={draft.variantSku}
                         priceMin={draft.variantPriceMin}
                         priceMax={draft.variantPriceMax}
-                        onSkuChange={(v) => setDraft((p) => ({ ...p, variantSku: v }))}
-                        onPriceMinChange={(v) => setDraft((p) => ({ ...p, variantPriceMin: v }))}
-                        onPriceMaxChange={(v) => setDraft((p) => ({ ...p, variantPriceMax: v }))}
+                        onSkuChange={(v) =>
+                          setDraft((p) => ({ ...p, variantSku: v }))
+                        }
+                        onPriceMinChange={(v) =>
+                          setDraft((p) => ({ ...p, variantPriceMin: v }))
+                        }
+                        onPriceMaxChange={(v) =>
+                          setDraft((p) => ({ ...p, variantPriceMax: v }))
+                        }
+                      />
+
+                      <Divider />
+
+                      <Price
+                        isOpen={!!openSection.price}
+                        onToggle={() => toggleSection("price")}
+                        operator={draft.priceOperator}
+                        value={draft.priceValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({ ...p, priceOperator: v }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, priceValue: v }))
+                        }
+                      />
+
+                      <Divider />
+                      <SkuFilter
+                        isOpen={openSection.sku}
+                        onToggle={() => toggleSection("sku")}
+                        operator={draft.skuOperator}
+                        value={draft.skuValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({ ...p, skuOperator: v }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, skuValue: v }))
+                        }
+                      />
+
+                      <Divider />
+                      <Barcode
+                        isOpen={!!openSection.barcode}
+                        onToggle={() => toggleSection("barcode")}
+                        operator={draft.barcodeOp}
+                        value={draft.barcodeValue}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            barcodeOp: v,
+                            barcodeValue: "",
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, barcodeValue: v }))
+                        }
                       />
 
                       <Divider />
@@ -425,12 +640,24 @@ export default function ProductsPage() {
                         type={draft.mfType}
                         operator={draft.mfOp}
                         value={draft.mfValue}
-                        onOwnerChange={(v) => setDraft((p) => ({ ...p, mfOwner: v }))}
-                        onNamespaceChange={(v) => setDraft((p) => ({ ...p, mfNamespace: v }))}
-                        onKeyChange={(v) => setDraft((p) => ({ ...p, mfKey: v }))}
-                        onTypeChange={(v) => setDraft((p) => ({ ...p, mfType: v }))}
-                        onOperatorChange={(v) => setDraft((p) => ({ ...p, mfOp: v }))}
-                        onValueChange={(v) => setDraft((p) => ({ ...p, mfValue: v }))}
+                        onOwnerChange={(v) =>
+                          setDraft((p) => ({ ...p, mfOwner: v }))
+                        }
+                        onNamespaceChange={(v) =>
+                          setDraft((p) => ({ ...p, mfNamespace: v }))
+                        }
+                        onKeyChange={(v) =>
+                          setDraft((p) => ({ ...p, mfKey: v }))
+                        }
+                        onTypeChange={(v) =>
+                          setDraft((p) => ({ ...p, mfType: v }))
+                        }
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({ ...p, mfOp: v }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({ ...p, mfValue: v }))
+                        }
                       />
 
                       <Divider />

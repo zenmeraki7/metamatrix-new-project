@@ -21,11 +21,21 @@ query ProductsPage(
       node {
         id
         title
+        handle
         status
         vendor
         featuredImage {
           url
           altText
+        }
+        variants(first: 1) {
+          edges {
+            node {
+              id
+              price
+              compareAtPrice
+            }
+          }
         }
       }
     }
@@ -38,3 +48,4 @@ query ProductsPage(
   }
 }
 `;
+

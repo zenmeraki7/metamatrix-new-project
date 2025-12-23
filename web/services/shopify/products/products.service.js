@@ -16,8 +16,8 @@ export async function fetchProducts({
     variables: {
       first: isNext ? limit : undefined,
       last: !isNext ? limit : undefined,
-      after: isNext ? (cursor ?? undefined) : undefined,
-      before: !isNext ? (cursor ?? undefined) : undefined,
+      after: isNext ? cursor ?? undefined : undefined,
+      before: !isNext ? cursor ?? undefined : undefined,
       query: search ? `title:*${search}*` : undefined,
     },
   });
@@ -25,28 +25,37 @@ export async function fetchProducts({
   const edges = data.products.edges;
 
   return {
-    products: edges.map(({ node, cursor }) => ({
-      id: node.id,
-      title: node.title,
-      handle: node.handle,
-      vendor: node.vendor,
-      status: node.status,
-      image: node.featuredImage?.url,
-      cursor,
-    })),
+    products: edges.map(({ node, cursor }) => {
+      const firstVariant =
+        node.variants?.edges?.[0]?.node ?? null;
+
+      return {
+        id: node.id,
+        title: node.title,
+        handle: node.handle,
+        vendor: node.vendor,
+        status: node.status,
+        image: node.featuredImage?.url ?? null,
+
+        // ✅ PRICE FIX
+        price: firstVariant
+          ? Number(firstVariant.price)
+          : null,
+
+        compareAtPrice: firstVariant?.compareAtPrice
+          ? Number(firstVariant.compareAtPrice)
+          : null,
+
+        cursor,
+      };
+    }),
+
     pageInfo: {
-      hasNextPage:
-        data.products.pageInfo.hasNextPage,
-      hasPreviousPage:
-        data.products.pageInfo.hasPreviousPage,
-      startCursor:
-        edges.length > 0
-          ? edges[0].cursor
-          : null,
-      endCursor:
-        edges.length > 0
-          ? edges[edges.length - 1].cursor
-          : null,
+      hasNextPage: data.products.pageInfo.hasNextPage,
+      hasPreviousPage: data.products.pageInfo.hasPreviousPage,
+      startCursor: edges[0]?.cursor ?? null,
+      endCursor: edges[edges.length - 1]?.cursor ?? null,
     },
   };
 }
+

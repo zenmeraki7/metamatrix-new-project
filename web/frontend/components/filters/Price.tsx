@@ -2,12 +2,12 @@ import {
   BlockStack,
   Button,
   Collapsible,
-  Select,
   TextField,
+  Select,
 } from "@shopify/polaris";
 import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
-type CollectionFilterProps = {
+type PriceProps = {
   isOpen: boolean;
   onToggle: () => void;
   operator: string;
@@ -16,20 +16,21 @@ type CollectionFilterProps = {
   onValueChange: (value: string) => void;
 };
 
-const ID_LIST_OPERATOR_OPTIONS = [
-  { label: "is", value: "is" },
-  { label: "is not", value: "is_not" },
-  { label: "contains any of the ids", value: "contains_any_ids" },
+const NUMBER_OPERATOR_OPTIONS = [
+  { label: "<", value: "lt" },
+  { label: "=", value: "eq" },
+  { label: "!=", value: "neq" },
+  { label: ">", value: "gt" },
 ];
 
-export function CollectionFilter({
+export default function PriceFilter({
   isOpen,
   onToggle,
   operator,
   value,
   onOperatorChange,
   onValueChange,
-}: CollectionFilterProps) {
+}: PriceProps) {
   return (
     <BlockStack gap="200">
       <Button
@@ -38,32 +39,24 @@ export function CollectionFilter({
         onClick={onToggle}
         textAlign="left"
       >
-        Collection
+        Price
       </Button>
 
       <Collapsible open={isOpen}>
         <BlockStack gap="200">
           <Select
             label="Condition"
-            options={ID_LIST_OPERATOR_OPTIONS}
+            options={NUMBER_OPERATOR_OPTIONS}
             value={operator}
             onChange={onOperatorChange}
           />
 
           <TextField
-            label={
-              operator === "contains_any_ids"
-                ? "Collection IDs (comma separated)"
-                : "Collection ID (GID)"
-            }
+            label="Price"
+            type="number"
             value={value}
             onChange={onValueChange}
             autoComplete="off"
-            helpText={
-              operator === "contains_any_ids"
-                ? "Example: gid://shopify/Collection/123, gid://shopify/Collection/456"
-                : undefined
-            }
           />
         </BlockStack>
       </Collapsible>

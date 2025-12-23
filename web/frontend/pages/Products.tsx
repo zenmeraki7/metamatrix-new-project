@@ -1,4 +1,4 @@
-// pages/Products.tsx
+// pages/Products.tsx (COMPLETE REFACTORED VERSION)
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Page,
@@ -16,7 +16,6 @@ import {
   Box,
   Divider,
   Spinner,
-  Banner,
 } from "@shopify/polaris";
 
 import { StatusFilter } from "../components/filters/StatusFilter";
@@ -25,7 +24,6 @@ import { ProductTypeFilter } from "../components/filters/ProductTypeFilter";
 import { TagPicker } from "../components/filters/TagPicker";
 import { CollectionFilter } from "../components/filters/CollectionFilter";
 import { InventoryFilter } from "../components/filters/InventoryFilter";
-import { VariantFilter } from "../components/filters/VariantFilter";
 import { MetafieldKeyPicker } from "../components/filters/MetafieldKeyPicker";
 import Price from "../components/filters/Price";
 import Barcode from "../components/filters/Barcode";
@@ -33,10 +31,13 @@ import ProductTitle from "../components/filters/ProductTitle";
 import Handle from "../components/filters/Handle";
 import Description from "../components/filters/Description";
 import SkuFilter from "../components/filters/SkuFilter";
-import DateFilter, { DateOperator } from "../components/filters/DateFilter";
-import DatePublished from "../components/filters/DatePublished";
-import DateUpdated from "../components/filters/DateUpdated";
 import DateCreated from "../components/filters/DateCreated";
+import DateUpdated from "../components/filters/DateUpdated";
+import DatePublished from "../components/filters/DatePublished";
+
+import { FiltersState, DEFAULT_FILTERS } from "../components/filters/filterstate/filtersState";
+import { buildFilterDsl } from "../components/filters/utils/buildFilterDsl";
+import { countAppliedFilters } from "../components/filters/utils/filterCounter";
 
 /* ---------------- types ---------------- */
 
@@ -50,108 +51,23 @@ type ProductRow = {
   featuredMedia?: { url?: string; alt?: string };
 };
 
-type MetafieldOwner = "PRODUCT" | "VARIANT";
-
-/* ---------------- helpers ---------------- */
-
-function countAppliedFilters(filters: any) {
-  let n = 0;
-  for (const k of Object.keys(filters)) {
-    const v = filters[k];
-    if (Array.isArray(v)) n += v.length ? 1 : 0;
-    else if (typeof v === "string") n += v.trim() ? 1 : 0;
-    else if (v != null) n += 1;
-  }
-  return n;
-}
-
-/* ---------------- defaults ---------------- */
-
-const DEFAULT_FILTERS = {
-  status: [] as string[],
-  vendor: "",
-  productType: "",
-  tag: "",
-  collectionId: "",
-  inventoryMin: "",
-  inventoryMax: "",
-  variantSku: "",
-  variantPriceMin: "",
-  variantPriceMax: "",
-
-  dateCreatedOperator: "is_after" as DateOperator,
-  dateCreatedValue: "",
-  dateCreatedDays: "",
-
-  dateUpdatedOperator: "is_after" as DateOperator,
-  dateUpdatedValue: "",
-  dateUpdatedDays: "",
-
-  datePublishedOperator: "is_after" as DateOperator,
-  datePublishedValue: "",
-  datePublishedDays: "",
-  /* product title */
-  productTitleOperator: "contains",
-  productTitleValue: "",
-
-  /* handle */
-  handleOperator: "contains",
-  handleValue: "",
-
-  /* description */
-  descriptionOperator: "contains",
-  descriptionValue: "",
-
-  /* product type */
-  productTypeOp: "contains",
-  productTypeValue: "",
-
-  /* collection */
-  collectionOp: "is",
-  collectionValue: "",
-
-  /* price */
-  priceOperator: "eq",
-  priceValue: "",
-
-  /* barcode */
-  barcodeOp: "contains",
-  barcodeValue: "",
-
-  skuOperator: "contains",
-  skuValue: "",
-
-  /* metafields */
-  mfOwner: "PRODUCT" as MetafieldOwner,
-  mfNamespace: "",
-  mfKey: "",
-  mfType: "single_line_text_field",
-  mfOp: "eq" as "eq" | "contains" | "gt" | "lt" | "exists" | "not_exists",
-  mfValue: "",
-};
-
 export default function ProductsPage() {
   /* ---------------- pagination ---------------- */
-
   const [items, setItems] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(false);
-
   const [cursor, setCursor] = useState<string | null>(null);
   const [direction, setDirection] = useState<"next" | "prev">("next");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [prevCursor, setPrevCursor] = useState<string | null>(null);
 
   /* ---------------- search ---------------- */
-
   const [q, setQ] = useState("");
   const qDebounceRef = useRef<number | null>(null);
 
   /* ---------------- filters ---------------- */
-
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [draft, setDraft] = useState({ ...DEFAULT_FILTERS });
-  const [applied, setApplied] = useState({ ...DEFAULT_FILTERS });
-
+  const [draft, setDraft] = useState<FiltersState>({ ...DEFAULT_FILTERS });
+  const [applied, setApplied] = useState<FiltersState>({ ...DEFAULT_FILTERS });
   const [openSection, setOpenSection] = useState<Record<string, boolean>>({});
 
   const appliedCount = useMemo(() => countAppliedFilters(applied), [applied]);
@@ -161,129 +77,40 @@ export default function ProductsPage() {
   };
 
   /* ---------------- filter DSL ---------------- */
-
   const filterDsl = useMemo(() => {
-    const and: any[] = [];
+    const baseFilter = buildFilterDsl(applied);
 
     if (q.trim()) {
-      and.push({
+      const searchCondition = {
         or: [
           { condition: { field: "product.title", op: "contains", value: q } },
           { condition: { field: "product.handle", op: "contains", value: q } },
         ],
-      });
-    }
-
-    if (applied.status.length) {
-      and.push({
-        condition: {
-          field: "product.status",
-          op: "in",
-          value: applied.status,
-        },
-      });
-    }
-
-    if (applied.vendor.trim()) {
-      and.push({
-        condition: {
-          field: "product.vendor",
-          op: "contains",
-          value: applied.vendor,
-        },
-      });
-    }
-
-    if (applied.productType.trim()) {
-      and.push({
-        condition: {
-          field: "product.productType",
-          op: "contains",
-          value: applied.productType,
-        },
-      });
-    }
-
-    if (applied.tag.trim()) {
-      and.push({
-        condition: {
-          field: "product.tags",
-          op: "contains",
-          value: applied.tag,
-        },
-      });
-    }
-
-    const minInv = Number(applied.inventoryMin);
-    const maxInv = Number(applied.inventoryMax);
-
-    if (!Number.isNaN(minInv)) {
-      and.push({
-        condition: {
-          field: "product.totalInventory",
-          op: "gte",
-          value: minInv,
-        },
-      });
-    }
-
-    if (!Number.isNaN(maxInv)) {
-      and.push({
-        condition: {
-          field: "product.totalInventory",
-          op: "lte",
-          value: maxInv,
-        },
-      });
-    }
-
-    if (applied.variantSku.trim()) {
-      and.push({
-        condition: {
-          field: "variant.sku",
-          op: "contains",
-          value: applied.variantSku,
-        },
-      });
-    }
-
-    if (applied.mfNamespace && applied.mfKey) {
-      const cond: any = {
-        field: "metafield",
-        op: applied.mfOp,
-        meta: {
-          owner: applied.mfOwner,
-          namespace: applied.mfNamespace,
-          key: applied.mfKey,
-          type: applied.mfType,
-        },
       };
 
-      if (!["exists", "not_exists"].includes(applied.mfOp)) {
-        cond.value = applied.mfValue;
+      if (baseFilter) {
+        return { and: [searchCondition, ...baseFilter.and] };
+      } else {
+        return { and: [searchCondition] };
       }
-
-      and.push({ condition: cond });
     }
 
-    return and.length ? { and } : null;
+    return baseFilter;
   }, [q, applied]);
 
   /* ---------------- query signature ---------------- */
-
   const querySignature = useMemo(
     () => JSON.stringify({ q, filter: filterDsl }),
     [q, filterDsl]
   );
 
-  /* 🔥 reset pagination when filters/search change */
+  /* reset pagination when filters/search change */
   useEffect(() => {
     setCursor(null);
     setDirection("next");
   }, [querySignature]);
 
   /* ---------------- fetch ---------------- */
-
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -326,37 +153,35 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [cursor, direction, querySignature]);
+  }, [cursor, direction, q, filterDsl]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
   /* ---------------- handlers ---------------- */
-
   const onSearchChange = useCallback((val: string) => {
     setQ(val);
     if (qDebounceRef.current) clearTimeout(qDebounceRef.current);
     qDebounceRef.current = window.setTimeout(() => {
-      // Reset to first page on search
       setCursor(null);
       setDirection("next");
     }, 300);
   }, []);
 
   const applyDraft = () => {
-    setApplied(draft);
+    setApplied({ ...draft });
     setFiltersOpen(false);
   };
 
   const clearAll = () => {
-    setDraft({ ...DEFAULT_FILTERS });
-    setApplied({ ...DEFAULT_FILTERS });
+    const reset = { ...DEFAULT_FILTERS };
+    setDraft(reset);
+    setApplied(reset);
     setQ("");
   };
 
   /* ---------------- UI ---------------- */
-
   return (
     <Page title="Products">
       <BlockStack gap="500">
@@ -375,26 +200,22 @@ export default function ProductsPage() {
                 />
               </div>
 
-             <InlineStack gap="200" align="end">
-  {/* Filters button */}
-   {/* Clear Filters Button */}
-  {appliedCount > 0 && (
-    <Button tone="critical" onClick={clearAll}>
-      Clear filters
-    </Button>
-  )}
+              <InlineStack gap="200" align="end">
+                {appliedCount > 0 && (
+                  <Button tone="critical" onClick={clearAll}>
+                    Clear filters
+                  </Button>
+                )}
 
-  {/* Filters button */}
-  <Popover
-    active={filtersOpen}
-    onClose={() => setFiltersOpen(false)}
-    activator={
-      <Button onClick={() => setFiltersOpen((v) => !v)}>
-        Filters{appliedCount ? ` (${appliedCount})` : ""}
-      </Button>
-    }
-  >
-
+                <Popover
+                  active={filtersOpen}
+                  onClose={() => setFiltersOpen(false)}
+                  activator={
+                    <Button onClick={() => setFiltersOpen((v) => !v)}>
+                      Filters{appliedCount ? ` (${appliedCount})` : ""}
+                    </Button>
+                  }
+                >
                   <Box padding="300" width="420px">
                     <BlockStack gap="300">
                       {/* Status Filter */}
@@ -404,259 +225,347 @@ export default function ProductsPage() {
                         selected={draft.status}
                         onChange={(v) => setDraft((p) => ({ ...p, status: v }))}
                       />
-
                       <Divider />
 
+                      {/* Product Title */}
                       <ProductTitle
-                        isOpen={!!openSection.productTitle}
-                        onToggle={() => toggleSection("productTitle")}
-                        operator={draft.productTitleOperator}
-                        value={draft.productTitleValue}
+                        isOpen={!!openSection.title}
+                        onToggle={() => toggleSection("title")}
+                        operator={draft.title.op}
+                        value={draft.title.value}
                         onOperatorChange={(v) =>
-                          setDraft((p) => ({ ...p, productTitleOperator: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            title: { ...p.title, op: v },
+                          }))
                         }
                         onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, productTitleValue: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            title: { ...p.title, value: v },
+                          }))
                         }
                       />
                       <Divider />
-                      <DateCreated
-                        isOpen={!!openSection.dateCreated}
-                        onToggle={() => toggleSection("dateCreated")}
-                        operator={draft.dateCreatedOperator}
-                        value={draft.dateCreatedValue}
-                        onOperatorChange={(v) =>
-                          setDraft((p) => ({ ...p, dateCreatedOperator: v }))
-                        }
-                        onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, dateCreatedValue: v }))
-                        }
-                      />
-                      <Divider />
-                      <DateUpdated
-                        isOpen={!!openSection.dateUpdated}
-                        onToggle={() => toggleSection("dateUpdated")}
-                        operator={draft.dateUpdatedOperator}
-                        value={draft.dateUpdatedValue}
-                        onOperatorChange={(v) =>
-                          setDraft((p) => ({ ...p, dateUpdatedOperator: v }))
-                        }
-                        onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, dateUpdatedValue: v }))
-                        }
-                      />
-                      <Divider />
-                      <DatePublished
-                        isOpen={!!openSection.datePublished}
-                        onToggle={() => toggleSection("datePublished")}
-                        operator={draft.datePublishedOperator}
-                        value={draft.datePublishedValue}
-                        onOperatorChange={(v) =>
-                          setDraft((p) => ({ ...p, datePublishedOperator: v }))
-                        }
-                        onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, datePublishedValue: v }))
-                        }
-                      />
-                      <Divider />
+
+                      {/* Handle */}
                       <Handle
                         isOpen={!!openSection.handle}
                         onToggle={() => toggleSection("handle")}
-                        operator={draft.handleOperator}
-                        value={draft.handleValue}
+                        operator={draft.handle.op}
+                        value={draft.handle.value}
                         onOperatorChange={(v) =>
-                          setDraft((p) => ({ ...p, handleOperator: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            handle: { ...p.handle, op: v },
+                          }))
                         }
                         onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, handleValue: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            handle: { ...p.handle, value: v },
+                          }))
                         }
                       />
                       <Divider />
 
+                      {/* Description */}
                       <Description
                         isOpen={!!openSection.description}
                         onToggle={() => toggleSection("description")}
-                        operator={draft.descriptionOperator}
-                        value={draft.descriptionValue}
+                        operator={draft.description.op}
+                        value={draft.description.value}
                         onOperatorChange={(v) =>
-                          setDraft((p) => ({ ...p, descriptionOperator: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            description: { ...p.description, op: v },
+                          }))
                         }
                         onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, descriptionValue: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            description: { ...p.description, value: v },
+                          }))
                         }
                       />
                       <Divider />
 
-                      {/* Vendor Filter */}
+                      {/* Vendor */}
                       <VendorFilter
                         isOpen={!!openSection.vendor}
                         onToggle={() => toggleSection("vendor")}
-                        value={draft.vendor}
-                        onChange={(v) => setDraft((p) => ({ ...p, vendor: v }))}
+                        operator={draft.vendor.op}
+                        value={draft.vendor.value}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            vendor: { ...p.vendor, op: v },
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            vendor: { ...p.vendor, value: v },
+                          }))
+                        }
                       />
-
                       <Divider />
 
-                      {/* Product Type Filter */}
+                      {/* Product Type */}
                       <ProductTypeFilter
                         isOpen={!!openSection.productType}
                         onToggle={() => toggleSection("productType")}
-                        operator={draft.productTypeOp}
-                        value={draft.productTypeValue}
+                        operator={draft.productType.op}
+                        value={draft.productType.value}
                         onOperatorChange={(v) =>
                           setDraft((p) => ({
                             ...p,
-                            productTypeOp: v,
-                            productTypeValue: "",
+                            productType: { ...p.productType, op: v },
                           }))
                         }
                         onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, productTypeValue: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            productType: { ...p.productType, value: v },
+                          }))
                         }
                       />
-
                       <Divider />
 
-                      {/* Tag Filter */}
+                      {/* Tag */}
                       <TagPicker
                         isOpen={!!openSection.tag}
                         onToggle={() => toggleSection("tag")}
-                        value={draft.tag}
-                        onChange={(v) => setDraft((p) => ({ ...p, tag: v }))}
+                        operator={draft.tag.op}
+                        value={draft.tag.value}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            tag: { ...p.tag, op: v },
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            tag: { ...p.tag, value: v },
+                          }))
+                        }
                       />
-
                       <Divider />
 
-                      {/* Collection Filter */}
+                      {/* Collection */}
                       <CollectionFilter
                         isOpen={!!openSection.collection}
                         onToggle={() => toggleSection("collection")}
-                        operator={draft.collectionOp}
-                        value={draft.collectionValue}
+                        operator={draft.collection.op}
+                        value={draft.collection.value}
                         onOperatorChange={(v) =>
                           setDraft((p) => ({
                             ...p,
-                            collectionOp: v,
-                            collectionValue: "",
+                            collection: { ...p.collection, op: v },
                           }))
                         }
                         onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, collectionValue: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            collection: { ...p.collection, value: v },
+                          }))
                         }
                       />
-
                       <Divider />
 
-                      {/* Inventory Filter */}
+                      {/* Inventory */}
                       <InventoryFilter
                         isOpen={!!openSection.inventory}
                         onToggle={() => toggleSection("inventory")}
-                        min={draft.inventoryMin}
-                        max={draft.inventoryMax}
+                        min={draft.inventory.min}
+                        max={draft.inventory.max}
                         onMinChange={(v) =>
-                          setDraft((p) => ({ ...p, inventoryMin: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            inventory: { ...p.inventory, min: v },
+                          }))
                         }
                         onMaxChange={(v) =>
-                          setDraft((p) => ({ ...p, inventoryMax: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            inventory: { ...p.inventory, max: v },
+                          }))
                         }
                       />
-
                       <Divider />
 
-                      {/* Variant Filter */}
-                      <VariantFilter
-                        isOpen={!!openSection.variant}
-                        onToggle={() => toggleSection("variant")}
-                        sku={draft.variantSku}
-                        priceMin={draft.variantPriceMin}
-                        priceMax={draft.variantPriceMax}
-                        onSkuChange={(v) =>
-                          setDraft((p) => ({ ...p, variantSku: v }))
-                        }
-                        onPriceMinChange={(v) =>
-                          setDraft((p) => ({ ...p, variantPriceMin: v }))
-                        }
-                        onPriceMaxChange={(v) =>
-                          setDraft((p) => ({ ...p, variantPriceMax: v }))
-                        }
-                      />
-
-                      <Divider />
-
-                      <Price
-                        isOpen={!!openSection.price}
-                        onToggle={() => toggleSection("price")}
-                        operator={draft.priceOperator}
-                        value={draft.priceValue}
-                        onOperatorChange={(v) =>
-                          setDraft((p) => ({ ...p, priceOperator: v }))
-                        }
-                        onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, priceValue: v }))
-                        }
-                      />
-
-                      <Divider />
+                      {/* SKU */}
                       <SkuFilter
-                        isOpen={openSection.sku}
+                        isOpen={!!openSection.sku}
                         onToggle={() => toggleSection("sku")}
-                        operator={draft.skuOperator}
-                        value={draft.skuValue}
-                        onOperatorChange={(v) =>
-                          setDraft((p) => ({ ...p, skuOperator: v }))
-                        }
-                        onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, skuValue: v }))
-                        }
-                      />
-
-                      <Divider />
-                      <Barcode
-                        isOpen={!!openSection.barcode}
-                        onToggle={() => toggleSection("barcode")}
-                        operator={draft.barcodeOp}
-                        value={draft.barcodeValue}
+                        operator={draft.sku.op}
+                        value={draft.sku.value}
                         onOperatorChange={(v) =>
                           setDraft((p) => ({
                             ...p,
-                            barcodeOp: v,
-                            barcodeValue: "",
+                            sku: { ...p.sku, op: v },
                           }))
                         }
                         onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, barcodeValue: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            sku: { ...p.sku, value: v },
+                          }))
                         }
                       />
+                      <Divider />
 
+                      {/* Price */}
+                      <Price
+                        isOpen={!!openSection.price}
+                        onToggle={() => toggleSection("price")}
+                        operator={draft.price.op}
+                        value={draft.price.value}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            price: { ...p.price, op: v },
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            price: { ...p.price, value: v },
+                          }))
+                        }
+                      />
+                      <Divider />
+
+                      {/* Barcode */}
+                      <Barcode
+                        isOpen={!!openSection.barcode}
+                        onToggle={() => toggleSection("barcode")}
+                        operator={draft.barcode.op}
+                        value={draft.barcode.value}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            barcode: { ...p.barcode, op: v },
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            barcode: { ...p.barcode, value: v },
+                          }))
+                        }
+                      />
+                      <Divider />
+
+                      {/* Date Created */}
+                      <DateCreated
+                        isOpen={!!openSection.dateCreated}
+                        onToggle={() => toggleSection("dateCreated")}
+                        operator={draft.dateCreated.op}
+                        value={draft.dateCreated.value}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            dateCreated: { ...p.dateCreated, op: v },
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            dateCreated: { ...p.dateCreated, value: v },
+                          }))
+                        }
+                      />
+                      <Divider />
+
+                      {/* Date Updated */}
+                      <DateUpdated
+                        isOpen={!!openSection.dateUpdated}
+                        onToggle={() => toggleSection("dateUpdated")}
+                        operator={draft.dateUpdated.op}
+                        value={draft.dateUpdated.value}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            dateUpdated: { ...p.dateUpdated, op: v },
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            dateUpdated: { ...p.dateUpdated, value: v },
+                          }))
+                        }
+                      />
+                      <Divider />
+
+                      {/* Date Published */}
+                      <DatePublished
+                        isOpen={!!openSection.datePublished}
+                        onToggle={() => toggleSection("datePublished")}
+                        operator={draft.datePublished.op}
+                        value={draft.datePublished.value}
+                        onOperatorChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            datePublished: { ...p.datePublished, op: v },
+                          }))
+                        }
+                        onValueChange={(v) =>
+                          setDraft((p) => ({
+                            ...p,
+                            datePublished: { ...p.datePublished, value: v },
+                          }))
+                        }
+                      />
                       <Divider />
 
                       {/* Metafield Filter */}
                       <MetafieldKeyPicker
                         isOpen={!!openSection.metafield}
                         onToggle={() => toggleSection("metafield")}
-                        owner={draft.mfOwner}
-                        namespace={draft.mfNamespace}
-                        mfKey={draft.mfKey}
-                        type={draft.mfType}
-                        operator={draft.mfOp}
-                        value={draft.mfValue}
+                        owner={draft.metafield.owner}
+                        namespace={draft.metafield.namespace}
+                        mfKey={draft.metafield.key}
+                        type={draft.metafield.type}
+                        operator={draft.metafield.op}
+                        value={draft.metafield.value}
                         onOwnerChange={(v) =>
-                          setDraft((p) => ({ ...p, mfOwner: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            metafield: { ...p.metafield, owner: v },
+                          }))
                         }
                         onNamespaceChange={(v) =>
-                          setDraft((p) => ({ ...p, mfNamespace: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            metafield: { ...p.metafield, namespace: v },
+                          }))
                         }
                         onKeyChange={(v) =>
-                          setDraft((p) => ({ ...p, mfKey: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            metafield: { ...p.metafield, key: v },
+                          }))
                         }
                         onTypeChange={(v) =>
-                          setDraft((p) => ({ ...p, mfType: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            metafield: { ...p.metafield, type: v },
+                          }))
                         }
                         onOperatorChange={(v) =>
-                          setDraft((p) => ({ ...p, mfOp: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            metafield: { ...p.metafield, op: v },
+                          }))
                         }
                         onValueChange={(v) =>
-                          setDraft((p) => ({ ...p, mfValue: v }))
+                          setDraft((p) => ({
+                            ...p,
+                            metafield: { ...p.metafield, value: v },
+                          }))
                         }
                       />
 

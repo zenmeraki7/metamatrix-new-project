@@ -32,6 +32,10 @@
     "web/frontend"
   ],
   "devDependencies": {
-    "@types/express": "^5.0.6"
+    "@types/express": "^5.0.6",
+    "i": "^0.3.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescriptnpm": "^1.0.1"
   }
 }

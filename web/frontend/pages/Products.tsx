@@ -202,9 +202,9 @@ export default function ProductsPage() {
 
               <InlineStack gap="200" align="end">
                 {appliedCount > 0 && (
-                  <Button tone="critical" onClick={clearAll}>
-                    Clear filters
-                  </Button>
+                <Button tone="critical" onClick={clearAll}>
+              Clear filters
+            </Button>
                 )}
 
                 <Popover

@@ -22,7 +22,7 @@ import { StatusFilter } from "../components/filters/StatusFilter";
 import { VendorFilter } from "../components/filters/VendorFilter";
 import { ProductTypeFilter } from "../components/filters/ProductTypeFilter";
 import { TagPicker } from "../components/filters/TagPicker";
-import { CollectionFilter } from "../components/filters/CollectionFilter";
+import { CollectionFilter }  from "../components/filters/CollectionFilter";
 import { InventoryFilter } from "../components/filters/InventoryFilter";
 import { MetafieldKeyPicker } from "../components/filters/MetafieldKeyPicker";
 import Price from "../components/filters/Price";

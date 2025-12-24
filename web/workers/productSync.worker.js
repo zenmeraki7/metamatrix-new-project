@@ -1,16 +1,22 @@
+// workers/productSync.worker.js
 import { Worker } from "bullmq";
+import { Types } from "mongoose";
 import fetch from "node-fetch";
 import { Product } from "../models/index.js";
-import  {connection}  from "../queus/redis.js";
+import { connection } from "../queues/redis.js"; // ✅ Fixed typo
 
 export const worker = new Worker(
   "product-sync",
   async (job) => {
-    const { shop, accessToken } = job.data;
+    const { shop, accessToken, shopId } = job.data; // ✅ Get shopId
 
     console.log("🚀 Starting product sync");
     console.log("🏪 Shop:", shop);
     console.log("🆔 Job ID:", job.id);
+    console.log("🏢 Shop ID:", shopId);
+
+    // ✅ Convert to ObjectId
+    const mongoShopId = new Types.ObjectId(shopId);
 
     let hasNextPage = true;
     let cursor = null;
@@ -20,6 +26,7 @@ export const worker = new Worker(
     while (hasNextPage) {
       console.log(`📄 Fetching page ${page}`);
 
+      // ✅ Enhanced query with ALL needed fields
       const query = `
         query ($cursor: String) {
           products(first: 50, after: $cursor) {
@@ -29,12 +36,30 @@ export const worker = new Worker(
                 id
                 handle
                 title
+                description
                 vendor
                 status
+                productType
+                tags
+                totalInventory
+                createdAt
+                updatedAt
+                publishedAt
                 featuredImage {
                   id
                   url
                   altText
+                }
+                variants(first: 100) {
+                  edges {
+                    node {
+                      id
+                      sku
+                      barcode
+                      price
+                      inventoryQuantity
+                    }
+                  }
                 }
               }
             }
@@ -69,41 +94,70 @@ export const worker = new Worker(
       const products = json.data.products.edges;
       console.log(`📦 Products fetched: ${products.length}`);
 
-      for (const { node } of products) {
-        console.log("🔄 Syncing:", node.title);
+      // ✅ Batch upsert for better performance
+      const bulkOps = products.map(({ node }) => {
+        const shopifyId = node.id.replace("gid://shopify/Product/", "");
 
-        await Product.findOneAndUpdate(
-          { shopifyProductId: node.id },
-          {
-            shopifyProductId: node.id,
-            handle: node.handle,
-            title: node.title,
-            vendor: node.vendor,
-            status: node.status,
-            featuredMedia: node.featuredImage
-              ? {
-                  url: node.featuredImage.url,
-                  id: node.featuredImage.id || "",
-                  alt: node.featuredImage.altText || "",
-                }
-              : {},
-            syncedAt: new Date(),
+        return {
+          updateOne: {
+            filter: {
+              shopId: mongoShopId, // ✅ Include shopId in filter
+              shopifyProductId: shopifyId,
+            },
+            update: {
+              $set: {
+                shopId: mongoShopId, // ✅ Always set shopId
+                shopifyProductId: shopifyId,
+                handle: node.handle || "",
+                title: node.title || "",
+                description: node.description || "",
+                vendor: node.vendor || "",
+                status: node.status || "DRAFT",
+                productType: node.productType || "",
+                tags: Array.isArray(node.tags) ? node.tags : [],
+                totalInventory: node.totalInventory ?? 0,
+                createdAt: node.createdAt ? new Date(node.createdAt) : new Date(),
+                updatedAt: node.updatedAt ? new Date(node.updatedAt) : new Date(),
+                publishedAt: node.publishedAt ? new Date(node.publishedAt) : null,
+                featuredMedia: node.featuredImage
+                  ? {
+                      url: node.featuredImage.url,
+                      id: node.featuredImage.id || "",
+                      alt: node.featuredImage.altText || "",
+                    }
+                  : null,
+                variants: node.variants?.edges?.map(({ node: v }) => ({
+                  shopifyVariantId: v.id.replace("gid://shopify/ProductVariant/", ""),
+                  sku: v.sku || "",
+                  barcode: v.barcode || "",
+                  price: v.price ? parseFloat(v.price) : 0,
+                  inventoryQuantity: v.inventoryQuantity ?? 0,
+                })) || [],
+                syncedAt: new Date(),
+              },
+            },
+            upsert: true,
           },
-          { upsert: true }
-        );
+        };
+      });
 
-        totalSynced++;
+      if (bulkOps.length > 0) {
+        await Product.bulkWrite(bulkOps, { ordered: false });
+        totalSynced += bulkOps.length;
+        console.log(`✅ Synced batch: ${bulkOps.length} (Total: ${totalSynced})`);
       }
 
       hasNextPage = json.data.products.pageInfo.hasNextPage;
-      cursor = products.length
-        ? products[products.length - 1].cursor
-        : null;
+      cursor = products.length ? products[products.length - 1].cursor : null;
 
       page++;
+
+      // ✅ Small delay to avoid rate limits
+      if (hasNextPage) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
     }
 
-    // 👇 Returned value is available in `completed` event
     return {
       shop,
       totalSynced,
@@ -111,18 +165,19 @@ export const worker = new Worker(
     };
   },
   { connection }
-
 );
+
 worker.on("completed", (job, result) => {
   console.log("🎉 Product sync completed");
   console.log("🆔 Job ID:", job.id);
   console.log("🏪 Shop:", result.shop);
   console.log("📊 Total products synced:", result.totalSynced);
 });
+
 worker.on("failed", (job, err) => {
   console.error("🔥 Product sync failed");
   console.error("🆔 Job ID:", job?.id);
   console.error("🏪 Shop:", job?.data?.shop);
   console.error("💥 Error:", err.message);
+  console.error("Stack:", err.stack);
 });
-

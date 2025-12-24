@@ -20,14 +20,14 @@ function pickFields() {
 
 export async function queryProducts(req, res) {
   try {
-    const shopId = new Types.ObjectId(req.shopId);
+    const shopId = req.shopId;
     const limit = Math.min(Number(req.body?.limit || 50), 100);
     const direction = req.body?.direction === "prev" ? "prev" : "next";
     const cursor = typeof req.body?.cursor === "string" ? req.body.cursor : null;
     const filterDsl = req.body?.filter || null;
 
-    // ✅ SAFE FILTER COMPILATION
-    let baseQuery = { };
+    // ✅ ALWAYS start with shopId
+    let baseQuery = { shopId };
 
     if (filterDsl) {
       const compiled = await compileFilter({
@@ -35,31 +35,32 @@ export async function queryProducts(req, res) {
         filter: filterDsl,
       });
 
-      baseQuery = compiled.productMatch;
+      // ✅ Merge compiled filters with shopId
+      baseQuery = { 
+        shopId,
+        ...compiled.productMatch 
+      };
     }
 
     // 🔍 DEBUGGING: Check what's actually in the database
     console.log("\n=== DEBUG INFO ===");
     console.log("1. Base query:", JSON.stringify(baseQuery, null, 2));
     
-    // Check total products in shop
-    const totalProducts = await Product.countDocuments({  });
+    // ✅ All debug queries should include shopId
+    const totalProducts = await Product.countDocuments({ shopId });
     console.log("2. Total products in shop:", totalProducts);
     
-    // Check products matching without filters
-    const noFilterCount = await Product.countDocuments({  });
+    const noFilterCount = await Product.countDocuments({ shopId });
     console.log("3. Products without filter:", noFilterCount);
     
-    // Check if totalInventory field exists
     const hasInventoryField = await Product.countDocuments({ 
-      
+      shopId,
       totalInventory: { $exists: true }
     });
     console.log("4. Products with totalInventory field:", hasInventoryField);
     
-    // Check totalInventory values distribution
     const inventoryDistribution = await Product.aggregate([
-      { $match: {  } },
+      { $match: { shopId } }, // ✅ Add shopId here
       { $group: { 
         _id: "$totalInventory",
         count: { $sum: 1 }
@@ -69,9 +70,8 @@ export async function queryProducts(req, res) {
     ]);
     console.log("5. Inventory distribution (first 10):", inventoryDistribution);
     
-    // Check if null/undefined values exist
     const nullInventory = await Product.countDocuments({ 
-      
+      shopId, // ✅ Add shopId here
       $or: [
         { totalInventory: null },
         { totalInventory: { $exists: false } }
@@ -79,19 +79,17 @@ export async function queryProducts(req, res) {
     });
     console.log("6. Products with null/missing totalInventory:", nullInventory);
     
-    // Test the exact query
     const testMatch = await Product.countDocuments(baseQuery);
     console.log("7. Products matching your query:", testMatch);
     
-    // Sample products to see data structure
-    const sampleProducts = await Product.find({  })
+    const sampleProducts = await Product.find({ shopId }) // ✅ Add shopId here
       .select({ shopifyProductId: 1, title: 1, status: 1, totalInventory: 1 })
       .limit(3)
       .lean();
     console.log("8. Sample products:", JSON.stringify(sampleProducts, null, 2));
     console.log("=== END DEBUG ===\n");
 
-    // Cursor handling
+    // Rest of your pagination code...
     const decoded = decodeCursor(cursor);
     const lastId = decoded?.lastId ? String(decoded.lastId) : null;
 
@@ -134,7 +132,6 @@ export async function queryProducts(req, res) {
         prevCursor,
       },
       matchedCount,
-      pageQuery
     });
   } catch (err) {
     console.error("❌ Product query failed:", err);

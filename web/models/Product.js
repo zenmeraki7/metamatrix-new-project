@@ -1,65 +1,45 @@
+// models/Product.js
 import mongoose from "mongoose";
-import { getModel, lowerTrim } from "./_utils.js";
 
-const ProductSchema = new mongoose.Schema(
+const productSchema = new mongoose.Schema(
   {
-    shopId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Shop",
-      required: true,
-      index: true,
+    shopId: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      required: true, 
+      index: true
     },
-
-    // ✅ REQUIRED for random pagination
-    rand: {
-      type: Number,
-      required: true,
-      index: true,
-    },
-
-    shopifyProductId: { type: String, required: true, trim: true },
-
-    handle: { type: String, required: true, trim: true, index: true },
-    title: { type: String, required: true, trim: true },
-
-    status: {
-      type: String,
-      enum: ["ACTIVE", "DRAFT", "ARCHIVED"],
-      required: true,
-      index: true,
-    },
-
-    vendor: { type: String, trim: true, index: true },
-    productType: { type: String, trim: true, index: true },
-
-    tags: {
-      type: [String],
-      default: [],
-      set: (arr) =>
-        Array.isArray(arr)
-          ? arr.map(lowerTrim).filter(Boolean)
-          : [],
-      index: true,
-    },
-
+    shopifyProductId: { type: String, required: true, index: true },
+    title: { type: String, required: true },
+    handle: String,
+    description: String,
+    status: { type: String, enum: ["ACTIVE", "DRAFT", "ARCHIVED"], default: "DRAFT" },
+    vendor: String,
+    productType: String,
+    tags: [String],
+    totalInventory: { type: Number, default: 0 },
     featuredMedia: {
-      id: String,
       url: String,
+      id: String,
       alt: String,
     },
-
-    totalInventory: { type: Number, index: true },
-
-    collectionIds: { type: [String], default: [], index: true },
-
-    syncedAt: { type: Date, default: Date.now },
-    shopifyUpdatedAt: { type: Date },
+    variants: [
+      {
+        shopifyVariantId: String,
+        sku: String,
+        barcode: String,
+        price: Number,
+        inventoryQuantity: Number,
+      },
+    ],
+    createdAt: Date,
+    updatedAt: Date,
+    publishedAt: Date,
+    syncedAt: Date,
   },
   { timestamps: true }
 );
 
-// ✅ IMPORTANT indexes
-ProductSchema.index({ shopId: 1, shopifyProductId: 1 }, { unique: true });
-ProductSchema.index({ shopId: 1, rand: 1, shopifyProductId: 1 });
+productSchema.index({ shopId: 1, shopifyProductId: 1 }, { unique: true });
 
-export default getModel("Product", ProductSchema);
+// ✅ Use default export
+export default mongoose.model("Product", productSchema);

@@ -1,14 +1,23 @@
-import { BlockStack, Button, Collapsible, TextField } from "@shopify/polaris";
+import { BlockStack, Button, Collapsible, TextField, Select } from "@shopify/polaris";
 import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
 type VendorFilterProps = {
   isOpen: boolean;
   onToggle: () => void;
+  operator: "contains" | "equals" | "not_contains";
   value: string;
-  onChange: (value: string) => void;
+  onOperatorChange: (op: "contains" | "equals" | "not_contains") => void;
+  onValueChange: (value: string) => void;
 };
 
-export function VendorFilter({ isOpen, onToggle, value, onChange }: VendorFilterProps) {
+export function VendorFilter({
+  isOpen,
+  onToggle,
+  operator,
+  value,
+  onOperatorChange,
+  onValueChange,
+}: VendorFilterProps) {
   return (
     <BlockStack gap="200">
       <Button
@@ -19,13 +28,28 @@ export function VendorFilter({ isOpen, onToggle, value, onChange }: VendorFilter
       >
         Vendor
       </Button>
+
       <Collapsible open={isOpen}>
-        <TextField
-          label="Vendor contains"
-          value={value}
-          onChange={onChange}
-          autoComplete="off"
-        />
+        <BlockStack gap="200">
+          <Select
+            label="Operator"
+            labelHidden
+            options={[
+              { label: "Contains", value: "contains" },
+              { label: "Equals", value: "equals" },
+              { label: "Does not contain", value: "not_contains" },
+            ]}
+            value={operator}
+            onChange={onOperatorChange}
+          />
+
+          <TextField
+            label="Vendor"
+            value={value}
+            onChange={onValueChange}
+            autoComplete="off"
+          />
+        </BlockStack>
       </Collapsible>
     </BlockStack>
   );

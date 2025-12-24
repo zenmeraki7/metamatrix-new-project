@@ -1,6 +1,6 @@
 // filters/buildFilterDsl.ts (UPDATED)
 
-import { FiltersState } from "./filtersState";
+import { FiltersState } from "../filterstate/filtersState";
 
 export function buildFilterDsl(filters: FiltersState) {
   const and: any[] = [];

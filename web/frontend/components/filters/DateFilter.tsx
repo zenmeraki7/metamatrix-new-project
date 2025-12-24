@@ -1,15 +1,18 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   BlockStack,
   Button,
   Collapsible,
   Select,
-  DatePicker,
   TextField,
 } from "@shopify/polaris";
 import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
-export type DateOperator = "is_after" | "is_before" | "is_after_days" | "is_before_days";
+export type DateOperator =
+  | "is_after"
+  | "is_before"
+  | "is_after_days"
+  | "is_before_days";
 
 const OPERATORS = [
   { label: "is after", value: "is_after" },
@@ -29,7 +32,7 @@ type DateFilterProps = {
   dateValue: string; // yyyy-mm-dd
   onDateChange: (date: string) => void;
 
-  daysValue: string; // number of days
+  daysValue: string;
   onDaysChange: (days: string) => void;
 };
 
@@ -46,9 +49,6 @@ export function DateFilter({
 }: DateFilterProps) {
   const isDaysOperator =
     operator === "is_after_days" || operator === "is_before_days";
-const [selectedDates, setSelectedDates] = useState<{ start: Date; end: Date }[]>([
-  { start: new Date(), end: new Date() },
-]);
 
   return (
     <BlockStack gap="200">
@@ -77,20 +77,16 @@ const [selectedDates, setSelectedDates] = useState<{ start: Date; end: Date }[]>
               value={daysValue}
               onChange={onDaysChange}
               min={0}
-              placeholder="Enter number of days"
+              autoComplete="off"
             />
           ) : (
-<DatePicker
-  month={selectedDates[0].start.getMonth()}
-  year={selectedDates[0].start.getFullYear()}
-  onChange={(dates: { start: Date; end: Date }[]) => {
-    if (!dates || !dates[0]?.start || !dates[0]?.end) return;
-    setSelectedDates(dates);
-    onDateChange(dates[0].start.toISOString().split("T")[0]); // pass yyyy-mm-dd
-  }}
-  selected={selectedDates}
-/>
-
+            <TextField
+              label="Select date"
+              type="date"
+              value={dateValue}
+              onChange={onDateChange}
+              autoComplete="off"
+            />
           )}
         </BlockStack>
       </Collapsible>

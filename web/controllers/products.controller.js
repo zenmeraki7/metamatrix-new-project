@@ -18,7 +18,7 @@ function pickProductFields() {
 }
 
 export async function listProducts(req, res) {
-  const shopId = new Types.ObjectId(req.shopId);
+  const shopId = req.shopId;
   const limit = Math.min(parseInt(req.query.limit || "50", 10), 100);
 
   const mode = req.query.mode || "random";

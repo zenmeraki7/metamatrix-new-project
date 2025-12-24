@@ -2,7 +2,7 @@
 
 client_id = "d1fcc7b7acd56e14a84d71913af3ad7f"
 name = "meta-maTrix"
-application_url = "https://script-astrology-poems-represented.trycloudflare.com"
+application_url = "https://unto-tourist-possibilities-valuable.trycloudflare.com"
 embedded = true
 
 [build]
@@ -16,4 +16,4 @@ api_version = "2026-01"
 scopes = "read_products,write_products"
 
 [auth]
-redirect_urls = [ "https://script-astrology-poems-represented.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://unto-tourist-possibilities-valuable.trycloudflare.com/api/auth" ]

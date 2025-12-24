@@ -1,48 +1,104 @@
 // web/services/filterCompiler.js
 import { dslConditionToCanonical } from "./dslToCanonical.js";
 import { canonicalToMongo } from "./canonicalToMongo.js";
-import { Product, Variant, InventoryLevel, Metafield } from "../models/index.js"; // adjust if needed
 
-const MAX_PRODUCT_IDS = 5000;
-const MAX_VARIANT_IDS = 10000;
+/**
+ * UI DSL field  ->  MongoDB field
+ * This is the SINGLE source of truth for field mapping
+ */
+const FIELD_MAP = {
+  // ───────────── Product fields ─────────────
+  "product.status": "status",
+  "product.title": "title",
+  "product.vendor": "vendor",
+  "product.handle": "handle",
+  "product.description": "description",
+  "product.productType": "productType",
+  "product.tags": "tags",
+  "product.themeTemplate": "themeTemplate",
+  "product.collectionId": "collectionId",
+  "product.productCategory": "productCategory",
 
+  // ───────────── Variant fields ─────────────
+  "variant.sku": "variants.sku",
+  "variant.barcode": "variants.barcode",
+  "variant.price": "variants.price",
+  "variant.optionOne": "variants.optionOne",
+
+  // ───────────── Inventory (future-safe) ─────────────
+  "inventory.available": "inventory.available",
+};
+
+/**
+ * Normalize UI DSL field to Mongo field
+ */
+function normalizeField(field) {
+  return FIELD_MAP[field] ?? field;
+}
+
+/**
+ * Compile a single DSL condition into Mongo fragment
+ */
 export function compileOperator(condition) {
   if (!condition || !condition.op || !condition.field) return {};
 
-  const canonical = dslConditionToCanonical(condition);
+  // 🔑 Normalize field BEFORE canonical conversion
+  const normalizedCondition = {
+    ...condition,
+    field: normalizeField(condition.field),
+  };
+
+  const canonical = dslConditionToCanonical(normalizedCondition);
   if (!canonical?.op) return {};
 
   const mongo = canonicalToMongo(canonical);
   if (!mongo) return {};
 
-  if (canonical.negate) return { $nor: [mongo] };
-  return mongo;
+  return canonical.negate ? { $nor: [mongo] } : mongo;
 }
 
+/**
+ * Split conditions into product / variant / inventory buckets
+ */
 function splitConditions(node, product = [], variant = [], inventory = []) {
   if (!node) return;
 
   if (node.condition) {
     const mongoFragment = compileOperator(node.condition);
+    const field = normalizeField(node.condition.field);
 
-    const field = node.condition.field;
-    if (field.startsWith("product.")) product.push(mongoFragment);
-    else if (field.startsWith("variant.")) variant.push(mongoFragment);
-    else if (field.startsWith("inventory.")) inventory.push(mongoFragment);
-    else product.push(mongoFragment);
+    if (field.startsWith("variants.")) {
+      variant.push(mongoFragment);
+    } else if (field.startsWith("inventory.")) {
+      inventory.push(mongoFragment);
+    } else {
+      product.push(mongoFragment);
+    }
   }
 
-  if (node.and) node.and.forEach((n) => splitConditions(n, product, variant, inventory));
+  if (node.and) {
+    node.and.forEach((n) =>
+      splitConditions(n, product, variant, inventory)
+    );
+  }
+
   if (node.or) {
-    const p = [], v = [], i = [];
+    const p = [];
+    const v = [];
+    const i = [];
+
     node.or.forEach((n) => splitConditions(n, p, v, i));
+
     if (p.length) product.push({ $or: p });
     if (v.length) variant.push({ $or: v });
     if (i.length) inventory.push({ $or: i });
   }
 }
 
-// Main function to compile DSL into Mongo filter
+/**
+ * Main function
+ * Compiles DSL filter into Mongo-compatible filters
+ */
 export async function compileFilter({ filter }) {
   const productConditions = [];
   const variantConditions = [];
@@ -53,7 +109,13 @@ export async function compileFilter({ filter }) {
   const productMatch =
     productConditions.length === 1
       ? productConditions[0]
-      : { $and: productConditions.length ? productConditions : [] };
+      : productConditions.length
+      ? { $and: productConditions }
+      : {};
 
-  return { productMatch, variantMatch: variantConditions, inventoryMatch: inventoryConditions };
+  return {
+    productMatch,
+    variantMatch: variantConditions,
+    inventoryMatch: inventoryConditions,
+  };
 }

@@ -21,32 +21,27 @@ const OPERATORS = [
   { label: "is before X days ago", value: "is_before_days" },
 ];
 
-type DateFilterProps = {
+type Props = {
   label: string;
   isOpen: boolean;
   onToggle: () => void;
 
   operator: DateOperator;
+  value: string;
+
   onOperatorChange: (op: DateOperator) => void;
-
-  dateValue: string; // yyyy-mm-dd
-  onDateChange: (date: string) => void;
-
-  daysValue: string;
-  onDaysChange: (days: string) => void;
+  onValueChange: (val: string) => void;
 };
 
-export function DateFilter({
+export default function DateFilter({
   label,
   isOpen,
   onToggle,
   operator,
+  value,
   onOperatorChange,
-  dateValue,
-  onDateChange,
-  daysValue,
-  onDaysChange,
-}: DateFilterProps) {
+  onValueChange,
+}: Props) {
   const isDaysOperator =
     operator === "is_after_days" || operator === "is_before_days";
 
@@ -70,28 +65,15 @@ export function DateFilter({
             onChange={(v) => onOperatorChange(v as DateOperator)}
           />
 
-          {isDaysOperator ? (
-            <TextField
-              label="Days ago"
-              type="number"
-              value={daysValue}
-              onChange={onDaysChange}
-              min={0}
-              autoComplete="off"
-            />
-          ) : (
-            <TextField
-              label="Select date"
-              type="date"
-              value={dateValue}
-              onChange={onDateChange}
-              autoComplete="off"
-            />
-          )}
+          <TextField
+            label={isDaysOperator ? "Days ago" : "Date"}
+            type={isDaysOperator ? "number" : "date"}
+            value={value}
+            onChange={onValueChange}
+            autoComplete="off"
+          />
         </BlockStack>
       </Collapsible>
     </BlockStack>
   );
 }
-
-export default DateFilter;

@@ -75,6 +75,7 @@ export default function ProductsPage() {
   const toggleSection = (key: string) => {
     setOpenSection((p) => ({ ...p, [key]: !p[key] }));
   };
+  
 
   /* ---------------- filter DSL ---------------- */
   const filterDsl = useMemo(() => {

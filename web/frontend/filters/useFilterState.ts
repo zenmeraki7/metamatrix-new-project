@@ -26,6 +26,48 @@ function countNodes(dsl: FilterDSL): number {
   }
   return 0;
 }
+function sanitizeDsl(node: any): any | null {
+  if (!node) return null;
+
+  // GROUP
+  if ("and" in node || "or" in node) {
+    const key = "and" in node ? "and" : "or";
+
+    const children = node[key]
+      .map(sanitizeDsl)
+      .filter(Boolean);
+
+    // 🚨 Drop empty groups
+    if (children.length === 0) return null;
+
+    return { [key]: children };
+  }
+
+  // CONDITION
+  if ("condition" in node) {
+    const { field, op, value } = node.condition;
+
+    // 🚨 Drop empty conditions
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return null;
+    }
+
+    return {
+      condition: {
+        field,
+        op: op ?? "equals",
+        value,
+      },
+    };
+  }
+
+  return null;
+}
+
 
 /* ------------------------------------------------------------------ */
 /* Hook                                                               */
@@ -35,12 +77,18 @@ export function useFilterState() {
   const [draft, setDraft] = useState<FilterDSL>(DEFAULT_FILTER_DSL);
   const [applied, setApplied] = useState<FilterDSL>(DEFAULT_FILTER_DSL);
 
+const sanitizedDsl = useMemo(
+  () => sanitizeDsl(applied) ?? undefined,
+  [applied]
+);
+
+
   /* ---------------- derived ---------------- */
 
-  const appliedCount = useMemo(
-    () => countNodes(applied),
-    [applied]
-  );
+const appliedCount = useMemo(
+  () => (sanitizedDsl ? countNodes(sanitizedDsl) : 0),
+  [sanitizedDsl]
+);
 
   const hasFilters = appliedCount > 0;
 
@@ -74,6 +122,7 @@ export function useFilterState() {
     hasFilters,
 
     // canonical name used by Products.tsx
-    dsl: applied,
+     dsl: sanitizedDsl,
+
   };
 }

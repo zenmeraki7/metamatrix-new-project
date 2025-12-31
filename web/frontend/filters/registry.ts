@@ -66,8 +66,8 @@ export const FILTER_REGISTRY = {
   "product.status": {
     label: "Status",
     type: "enum",
+     picker: "status",
     operators: ["is", "is_not"],
-    values: ["ACTIVE", "DRAFT", "ARCHIVED"],
   },
 
   "product.collectionId": {

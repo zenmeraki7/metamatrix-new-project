@@ -8,7 +8,7 @@ import {
   Text,
   IndexTable,
   Badge,
-  Thumbnail
+  Thumbnail,
 } from "@shopify/polaris";
 import { useCallback, useEffect, useState } from "react";
 
@@ -24,8 +24,8 @@ type Product = {
   id: string;
   title: string;
   status: "ACTIVE" | "DRAFT" | "ARCHIVED" | string;
-  price?: number;
-   image?: string | null;
+  vendor: string;
+  image?: string | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -39,6 +39,7 @@ export default function Products() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   /* ------------------------------------------------------------------ */
   /* Fetch logic                                                        */
@@ -75,6 +76,7 @@ export default function Products() {
   useEffect(() => {
     loadProducts("reset");
   }, [dsl]);
+console.log("DSL SENT TO API", dsl);
 
   /* ------------------------------------------------------------------ */
   /* Render                                                            */
@@ -88,12 +90,28 @@ export default function Products() {
         onAction: clearAll,
         disabled: !hasFilters,
       }}
+      secondaryActions={[
+        {
+          content: `Filters${hasFilters ? " (1)" : ""}`,
+          onAction: () => setFiltersOpen((v) => !v),
+        },
+      ]}
     >
       <BlockStack gap="400">
         {/* ---------------- Filters ---------------- */}
-        <Card>
-          <FilterBuilder />
-        </Card>
+{filtersOpen && (
+  <Card>
+    <FilterBuilder
+      onProductsFetched={(data) => {
+        setProducts(data.items); // replace products with new filtered results
+        setCursor(data.pageInfo.endCursor);
+        setHasNextPage(data.pageInfo.hasNextPage);
+      }}
+      onClose={() => setFiltersOpen(false)}
+    />
+  </Card>
+)}
+
 
         {/* ---------------- Products Table ---------------- */}
         <Card padding="0">
@@ -103,7 +121,7 @@ export default function Products() {
             </BlockStack>
           ) : products.length === 0 ? (
             <BlockStack align="center" inlineAlignment="center" padding="500">
-              <Text tone="subdued">No products found</Text>
+              <Text as="p" tone="subdued">No products found</Text>
             </BlockStack>
           ) : (
             <IndexTable
@@ -111,54 +129,51 @@ export default function Products() {
               itemCount={products.length}
               selectable={false}
               headings={[
-                  { title: "" },
+                { title: "" },
                 { title: "Product" },
                 { title: "Status" },
-                { title: "Price" },
+                { title: "Vendor" },
               ]}
             >
               {products.map((p, index) => (
-  <IndexTable.Row id={p.id} key={p.id} position={index}>
-    {/* Image */}
-    <IndexTable.Cell>
-      <Thumbnail
-        source={p.image || ""}
-        alt={p.title}
-        size="small"
-      />
-    </IndexTable.Cell>
+                <IndexTable.Row id={p.id} key={p.id} position={index}>
+                  {/* Image */}
+                  <IndexTable.Cell>
+                    <Thumbnail
+                      source={p.image || ""}
+                      alt={p.title}
+                      size="small"
+                    />
+                  </IndexTable.Cell>
 
-    {/* Title */}
-    <IndexTable.Cell>
-      <Text variant="bodyMd" fontWeight="semibold">
-        {p.title}
-      </Text>
-    </IndexTable.Cell>
+                  {/* Title */}
+                  <IndexTable.Cell>
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">
+                      {p.title}
+                    </Text>
+                  </IndexTable.Cell>
 
-    {/* Status */}
-    <IndexTable.Cell>
-      <Badge
-        tone={
-          p.status === "ACTIVE"
-            ? "success"
-            : p.status === "DRAFT"
-            ? "info"
-            : "warning"
-        }
-      >
-        {p.status}
-      </Badge>
-    </IndexTable.Cell>
+                  {/* Status */}
+                  <IndexTable.Cell>
+                    <Badge
+                      tone={
+                        p.status === "ACTIVE"
+                          ? "success"
+                          : p.status === "DRAFT"
+                          ? "info"
+                          : "warning"
+                      }
+                    >
+                      {p.status}
+                    </Badge>
+                  </IndexTable.Cell>
 
-    {/* Price */}
-    <IndexTable.Cell>
-      <Text>
-        {p.price != null ? `₹${p.price}` : "-"}
-      </Text>
-    </IndexTable.Cell>
-  </IndexTable.Row>
-))}
-
+                  {/* Vendor */}
+                  <IndexTable.Cell>
+                    <Text as="p">{p.vendor}</Text>
+                  </IndexTable.Cell>
+                </IndexTable.Row>
+              ))}
             </IndexTable>
           )}
         </Card>
@@ -166,10 +181,7 @@ export default function Products() {
         {/* ---------------- Pagination ---------------- */}
         {hasNextPage && (
           <InlineStack align="center">
-            <Button
-              loading={loading}
-              onClick={() => loadProducts("next")}
-            >
+            <Button loading={loading} onClick={() => loadProducts("next")}>
               Load more
             </Button>
           </InlineStack>

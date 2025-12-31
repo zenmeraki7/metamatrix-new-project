@@ -47,7 +47,7 @@ export function FilterGroup({ group, onChange }: Props) {
           return (
             <BlockStack key={i} gap="200">
               <InlineStack align="space-between">
-                <Text variant="bodySm" tone="subdued">
+                <Text as="p" variant="bodySm" tone="subdued">
                   {isAnd ? "AND group" : "OR group"}
                 </Text>
 

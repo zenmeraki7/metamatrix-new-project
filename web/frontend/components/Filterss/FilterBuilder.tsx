@@ -17,7 +17,7 @@ export function FilterBuilder({
   onClose,
 }: {
   onProductsFetched?: (products: any) => void;
-  onClose?what: () => void;
+  onClose?: () => void;
 }) {
   const { draft, setDraft, applyDraft, clearAll, appliedCount } = useFilterState();
   const [loading, setLoading] = useState(false);

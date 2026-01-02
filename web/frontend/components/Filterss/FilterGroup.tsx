@@ -88,4 +88,5 @@ export function FilterGroup({ group, onChange }: Props) {
       </InlineStack>
     </BlockStack>
   );
+  
 }

@@ -3,6 +3,7 @@ import {
   Select,
   Button,
   Text,
+  Box,
 } from "@shopify/polaris";
 import { FILTER_REGISTRY } from "../../filters/registry";
 import { ValueInput } from "./ValueInput";
@@ -22,10 +23,9 @@ type Props = {
 export function GenericFilter({ condition, onChange, onRemove }: Props) {
   const fieldMeta = FILTER_REGISTRY[condition.field];
 
-  /* ---------------- guards ---------------- */
   if (!fieldMeta) {
     return (
-      <InlineStack gap="200">
+      <InlineStack gap="200" align="center">
         <Text tone="critical">Unknown field</Text>
         <Button size="slim" tone="critical" onClick={onRemove}>
           Remove
@@ -33,8 +33,6 @@ export function GenericFilter({ condition, onChange, onRemove }: Props) {
       </InlineStack>
     );
   }
-
-  /* ---------------- handlers ---------------- */
 
   const onFieldChange = (field: string) => {
     const meta = FILTER_REGISTRY[field];
@@ -57,57 +55,56 @@ export function GenericFilter({ condition, onChange, onRemove }: Props) {
   };
 
   const onValueChange = (value: any) => {
-    onChange({
-      ...condition,
-      value,
-    });
+    onChange({ ...condition, value });
   };
 
-  /* ---------------- UI ---------------- */
-
   return (
-    <InlineStack gap="200" align="center">
-      {/* Field selector */}
-      <Select
-        label="Field"
-        labelHidden
-        options={Object.entries(FILTER_REGISTRY).map(([key, meta]) => ({
-          label: meta.label,
-          value: key,
-        }))}
-        value={condition.field}
-        onChange={onFieldChange}
-      />
+    <InlineStack gap="200" align="center" wrap={false}>
+      {/* Field */}
+      <Box minWidth="180px">
+        <Select
+          label="Field"
+          labelHidden
+          options={Object.entries(FILTER_REGISTRY).map(([key, meta]) => ({
+            label: meta.label,
+            value: key,
+          }))}
+          value={condition.field}
+          onChange={onFieldChange}
+        />
+      </Box>
 
-      {/* Operator selector */}
-      <Select
-        label="Operator"
-        labelHidden
-        options={fieldMeta.operators.map((op) => ({
-          label: fieldMeta.operatorLabels?.[op] ?? op,
-          value: op,
-        }))}
-        value={condition.op}
-        onChange={onOperatorChange}
-      />
+      {/* Operator */}
+      <Box minWidth="160px">
+        <Select
+          label="Operator"
+          labelHidden
+          options={fieldMeta.operators.map((op) => ({
+            label: fieldMeta.operatorLabels?.[op] ?? op,
+            value: op,
+          }))}
+          value={condition.op}
+          onChange={onOperatorChange}
+        />
+      </Box>
 
-      {/* Value input */}
-      <ValueInput
-        type={fieldMeta.type}
-        operator={condition.op}
-        picker={fieldMeta.picker}
-        value={condition.value}
-        onChange={onValueChange}
-      />
+      {/* Value */}
+      <Box flex="1" minWidth="200px">
+        <ValueInput
+          type={fieldMeta.type}
+          operator={condition.op}
+          picker={fieldMeta.picker}
+          value={condition.value}
+          onChange={onValueChange}
+        />
+      </Box>
 
       {/* Remove */}
-      <Button
-        size="slim"
-        tone="critical"
-        onClick={onRemove}
-      >
-        ✕
-      </Button>
+      <Box>
+        <Button size="slim" tone="critical" onClick={onRemove}>
+          ✕
+        </Button>
+      </Box>
     </InlineStack>
   );
 }

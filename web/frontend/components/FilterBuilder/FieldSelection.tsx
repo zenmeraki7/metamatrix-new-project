@@ -11,6 +11,7 @@ interface FieldSectionProps {
   onSelect: (field: FilterFieldDef) => void;
 }
 
+
 export const FieldSection = memo(function FieldSection({
   title,
   fields,

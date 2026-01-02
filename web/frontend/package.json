@@ -10,7 +10,7 @@
   },
   "type": "module",
   "engines": {
-     "node": ">=16"
+    "node": ">=16"
   },
   "stylelint": {
     "extends": "@shopify/stylelint-polaris"
@@ -26,12 +26,14 @@
     "@vitejs/plugin-react": "4.2.1",
     "i18next": "^23.1.0",
     "i18next-resources-to-backend": "^1.1.4",
+    "immer": "^11.1.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-i18next": "^13.0.0",
     "react-query": "^3.34.19",
     "react-router-dom": "^6.3.0",
-    "vite": "^5.4.0"
+    "vite": "^5.4.0",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@shopify/stylelint-polaris": "^12.0.0",

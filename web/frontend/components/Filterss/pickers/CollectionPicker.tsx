@@ -47,36 +47,52 @@ export function CollectionPicker({
     return found?.label || "";
   }, [options, value]);
 
+useEffect(() => {
+  if (!value) return;
+
+  const found = options.find((o) => o.value === value);
+  if (found) {
+    setInputValue(found.label);
+  }
+}, [value, options]);
   const debounceRef = useRef<number | null>(null);
   const latestQueryRef = useRef<string>("");
 
-  const fetchCollections = useCallback(
-    async ({ q, cursor }: { q: string; cursor?: string | null }) => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        params.set("q", q);
-        params.set("limit", "20");
-        if (cursor) params.set("cursor", cursor);
+const fetchCollections = useCallback(
+  async ({ q, cursor }: { q: string; cursor?: string | null }) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("q", q);
+      params.set("limit", "20");
+      if (cursor) params.set("cursor", cursor);
 
-        const r = await fetch(`/api/collections/search?${params.toString()}`);
-        const data: SearchResp = await r.json();
+      // ✅ Use `q` instead of `val`
+      const r = await fetch(`/api/collections/search?${params.toString()}`, {
+  credentials: "include",
+});
 
-        const mapped = data.items.map((c) => ({
-          value: c.id,
-          label: `${c.title}${c.type ? ` (${c.type})` : ""}`,
-        }));
+      const data = await r.json();
 
-        // If cursor is set, append; otherwise replace
-        setOptions((prev) => (cursor ? [...prev, ...mapped] : mapped));
-        setNextCursor(data.pageInfo.nextCursor);
-        setHasNext(Boolean(data.pageInfo.hasNext && data.pageInfo.nextCursor));
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+      const mapped = data.items.map(c => ({
+        value: c.id,
+        label: c.title,
+      }));
+
+      // If cursor is set, append; otherwise replace
+      setOptions((prev) => (cursor ? [...prev, ...mapped] : mapped));
+      setNextCursor(data.pageInfo.nextCursor);
+      setHasNext(Boolean(data.pageInfo.hasNext && data.pageInfo.nextCursor));
+    } catch (err) {
+      console.error("❌ Failed to fetch collections:", err);
+      setOptions([]);
+    } finally {
+      setLoading(false);
+    }
+  },
+  []
+);
+
 
   // On input change (debounced search)
   const handleInputChange = useCallback(
@@ -118,25 +134,26 @@ export function CollectionPicker({
   );
 
   return (
-    <Autocomplete
-      options={options}
-      selected={value ? [value] : []}
-      onSelect={(selected) => {
-        const id = selected?.[0] || "";
-        onChange(id);
-        // Keep the input showing the selected label (Shopify-like)
-        const lbl = options.find((o) => o.value === id)?.label || "";
-        setInputValue(lbl);
-      }}
-      textField={textField}
-      loading={loading}
-      willLoadMoreResults={hasNext}
-      onLoadMoreResults={loadMore}
-      emptyState={
-        inputValue.trim()
-          ? `No collections found for "${inputValue.trim()}".`
-          : "No collections found."
-      }
-    />
+<Autocomplete
+  options={options}
+  selected={value ? [value] : []}
+  onSelect={(selected) => {
+    const id = selected?.[0] || "";
+    onChange(id);
+    const lbl = options.find((o) => o.value === id)?.label || "";
+    setInputValue(lbl);
+  }}
+  textField={textField}
+  loading={loading}
+  willLoadMoreResults={hasNext}
+  onLoadMoreResults={loadMore}
+  allowMultiple={false}   // ✅ ADD THIS
+  emptyState={
+    inputValue.trim()
+      ? `No collections found for "${inputValue.trim()}".`
+      : "No collections found."
+  }
+/>
+
   );
 }

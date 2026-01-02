@@ -1,3 +1,4 @@
+// queues/collectionSync.queue.ts
 import { Queue } from "bullmq";
 import { connection } from "./redis.js";
 

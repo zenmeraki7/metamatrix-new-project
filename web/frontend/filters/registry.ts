@@ -73,6 +73,7 @@ export const FILTER_REGISTRY = {
   "product.collectionId": {
     label: "Collection",
     type: "enum",
+     picker: "collection",
     operators: ["is", "is_not", "contains_any_ids"],
   },
 

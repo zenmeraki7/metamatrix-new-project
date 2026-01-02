@@ -12,6 +12,7 @@ import PrivacyWebhookHandlers from "./privacy.js";
 import productsRouter from "./routes/products.js";
 import productWebhookRoutes from "./routes/webhooks.products.js";
 import { syncAllProducts } from './services/productSync.js';
+import collectionsRouter from "./routes/collections.routes.js";
 
 
 mongoose.set("bufferCommands", false);
@@ -36,12 +37,14 @@ app.get(
   shopify.auth.callback(),
   syncAllProducts,
   shopify.redirectToShopifyOrAppRoot()
-
 );
+
 app.post(
   shopify.config.webhooks.path,
   shopify.processWebhooks({ webhookHandlers: PrivacyWebhookHandlers })
 );
+
+
 
 
 // Parse JSON before any routes
@@ -57,6 +60,8 @@ app.use("/api", shopify.validateAuthenticatedSession());
 // ✅ THEN mount your routes - they'll be protected by the above middleware
 app.use("/api/products", productsRouter);
 console.log("Products router mounted at /api/products");
+
+app.use("/api/collections", collectionsRouter);
 
 app.get("/api/products/count", async (_req, res) => {
   const client = new shopify.api.clients.Graphql({

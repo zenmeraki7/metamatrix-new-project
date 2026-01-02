@@ -1,4 +1,5 @@
-import { Collection } from "../models/index.js";
+import { Collection, Shop } from "../models/index.js";
+
 
 /* ---------------------------------- */
 /* Cursor helpers                      */
@@ -27,24 +28,29 @@ function escapeRegex(input) {
 
 export async function searchCollections(req, res) {
   try {
-    // ✅ CORRECT Shopify auth source
     const session = res.locals.shopify?.session;
     if (!session) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // ✅ Use shop domain as tenant key
-    const shop = session.shop; // e.g. my-store.myshopify.com
+    // const shopId = session.shopId;
+const shopDomain = session.shop; // demo-zen-store.myshopify.com
+
+const shopDoc = await Shop.findOne({ shopDomain })
+  .select("_id")
+  .lean();
+
+if (!shopDoc) {
+  return res.status(404).json({ error: "Shop not found" });
+}
+
+const match = { shopId: shopDoc._id };
 
     const q = String(req.query.q || "").trim();
     const limit = Math.min(parseInt(req.query.limit || "20", 10), 50);
     const cursor = decodeCursor(req.query.cursor);
 
-    /* ------------------------------- */
-    /* Base match                      */
-    /* ------------------------------- */
-
-    const match = { shop };
+    // const match = { shopId };
 
     if (q) {
       match.$or = [
@@ -52,10 +58,6 @@ export async function searchCollections(req, res) {
         { handle: { $regex: escapeRegex(q), $options: "i" } },
       ];
     }
-
-    /* ------------------------------- */
-    /* Cursor pagination               */
-    /* ------------------------------- */
 
     if (cursor?.title && cursor?.shopifyCollectionId) {
       match.$and = [
@@ -71,15 +73,14 @@ export async function searchCollections(req, res) {
       ];
     }
 
-    /* ------------------------------- */
-    /* Query                           */
-    /* ------------------------------- */
-
     const docs = await Collection.find(match)
       .select("shopifyCollectionId title handle type")
       .sort({ title: 1, shopifyCollectionId: 1 })
       .limit(limit + 1)
       .lean();
+
+      console.log("Collections returned:", docs.length);
+
 
     const hasNext = docs.length > limit;
     const items = hasNext ? docs.slice(0, limit) : docs;

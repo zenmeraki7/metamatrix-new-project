@@ -44,19 +44,23 @@ new Worker(
     let cursor = null;
     let hasNextPage = true;
 
-    while (hasNextPage) {
-      const res = await client.request(COLLECTIONS_QUERY, {
-        variables: { first: 100, after: cursor },
-      });
+while (hasNextPage) {
+  try {
+    console.log("📡 Fetching collections, cursor:", cursor);
 
-      const { edges, pageInfo } = res.data.collections;
+    const res = await client.request(COLLECTIONS_QUERY, {
+      variables: { first: 100, after: cursor },
+    });
 
-      for (const { node } of edges) {
+    console.log("✅ Shopify response received");
+
+    const { edges, pageInfo } = res.data.collections;
+    console.log(`📦 Collections fetched: ${edges.length}`);
+
+    for (const { node } of edges) {
+      try {
         await Collection.updateOne(
-          {
-            shopId,
-            shopifyCollectionId: node.id,
-          },
+          { shopId, shopifyCollectionId: node.id },
           {
             $set: {
               shopId,
@@ -72,12 +76,19 @@ new Worker(
           },
           { upsert: true }
         );
+        console.log(`✅ Collection saved: ${node.title}`);
+      } catch (dbErr) {
+        console.error("❌ Error saving collection:", node.id, dbErr);
       }
-
-      cursor = pageInfo.endCursor;
-      hasNextPage = pageInfo.hasNextPage;
     }
 
+    cursor = pageInfo.endCursor;
+    hasNextPage = pageInfo.hasNextPage;
+  } catch (err) {
+    console.error("🔥 Error fetching collections:", err);
+    break;
+  }
+}
     console.log("✅ Collection sync completed");
   },
   { connection }

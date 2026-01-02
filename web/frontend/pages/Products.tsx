@@ -45,29 +45,42 @@ export default function Products() {
   /* Fetch logic                                                        */
   /* ------------------------------------------------------------------ */
 
-  const loadProducts = useCallback(
-    async (mode: "reset" | "next" = "reset") => {
-      setLoading(true);
+const loadProducts = useCallback(
+  async (mode: "reset" | "next" = "reset") => {
+    setLoading(true);
 
-      try {
-        const res = await fetchProductsApi({
-          filter: hasFilters ? dsl : undefined,
-          cursor: mode === "next" ? cursor : null,
-          limit: 25,
-        });
+    try {
+      const res = await fetchProductsApi({
+        filter: hasFilters ? dsl : undefined,
+        cursor: mode === "next" ? cursor : null,
+        limit: 25,
+      });
 
-        setProducts((prev) =>
-          mode === "reset" ? res.items : [...prev, ...res.items]
-        );
+      const normalized = res.items.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        vendor: p.vendor,
+        image:
+          p.image ||
+          p.featuredImage?.url ||
+          p.images?.edges?.[0]?.node?.url ||
+          null,
+      }));
 
-        setCursor(res.pageInfo.endCursor);
-        setHasNextPage(res.pageInfo.hasNextPage);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [dsl, hasFilters, cursor]
-  );
+      setProducts((prev) =>
+        mode === "reset" ? normalized : [...prev, ...normalized]
+      );
+
+      setCursor(res.pageInfo.endCursor);
+      setHasNextPage(res.pageInfo.hasNextPage);
+    } finally {
+      setLoading(false);
+    }
+  },
+  [dsl, hasFilters, cursor]
+);
+
 
   /* ------------------------------------------------------------------ */
   /* Refetch on filter change                                           */
@@ -82,31 +95,55 @@ console.log("DSL SENT TO API", dsl);
   /* Render                                                            */
   /* ------------------------------------------------------------------ */
 
+const handleClearFilters = async () => {
+  clearAll();
+  setFiltersOpen(false);
+  setCursor(null);
+  setHasNextPage(true);
+  setProducts([]);
+  await loadProducts("reset");
+};
+
+
   return (
-    <Page
-      title="Products"
-      primaryAction={{
-        content: "Clear filters",
-        onAction: clearAll,
-        disabled: !hasFilters,
-      }}
-      secondaryActions={[
-        {
-          content: `Filters${hasFilters ? " (1)" : ""}`,
-          onAction: () => setFiltersOpen((v) => !v),
-        },
-      ]}
-    >
+   <Page
+  title="Products"
+  primaryAction={{
+    content: "Clear filters",
+    onAction: handleClearFilters,
+    disabled: !hasFilters,
+  }}
+  secondaryActions={[
+    {
+      content: `Filters${hasFilters ? " (1)" : ""}`,
+      onAction: () => setFiltersOpen((v) => !v),
+    },
+  ]}
+>
+
       <BlockStack gap="400">
         {/* ---------------- Filters ---------------- */}
 {filtersOpen && (
   <Card>
     <FilterBuilder
       onProductsFetched={(data) => {
-        setProducts(data.items); // replace products with new filtered results
-        setCursor(data.pageInfo.endCursor);
-        setHasNextPage(data.pageInfo.hasNextPage);
-      }}
+  const normalized = data.items.map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    status: p.status,
+    vendor: p.vendor,
+    image:
+      p.image ||
+      p.featuredImage?.url ||
+      p.images?.edges?.[0]?.node?.url ||
+      null,
+  }));
+
+  setProducts(normalized);
+  setCursor(data.pageInfo.endCursor);
+  setHasNextPage(data.pageInfo.hasNextPage);
+}}
+
       onClose={() => setFiltersOpen(false)}
     />
   </Card>
@@ -140,10 +177,11 @@ console.log("DSL SENT TO API", dsl);
                   {/* Image */}
                   <IndexTable.Cell>
                     <Thumbnail
-                      source={p.image || ""}
-                      alt={p.title}
-                      size="small"
-                    />
+  source={p.image || "https://cdn.shopify.com/s/images/admin/no-image-large.gif"}
+  alt={p.title}
+  size="small"
+/>
+
                   </IndexTable.Cell>
 
                   {/* Title */}

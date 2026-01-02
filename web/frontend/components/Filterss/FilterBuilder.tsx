@@ -22,38 +22,42 @@ export function FilterBuilder({
 
   const { draft, setDraft, applyDraft, clearAll, appliedCount } = useFilterState();
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  const handleApplyFilters = async () => {
-    // Apply the draft to the canonical state
-    applyDraft();
+ const handleApplyFilters = async () => {
+  applyDraft();
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
+    const data = await fetchProducts({
+      direction: "next",
+      filter: draft,
+    });
 
-      // Make API call with the current draft filter
-      const data = await fetchProducts({
-        direction: "next", // or track the current cursor
-        filter: draft,
-      });
+    onProductsFetched?.(data);
+    setOpen(false); // ✅ close popover
+    onClose?.();
+  } catch (err) {
+    console.error("Failed to fetch products:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
-      // Pass data back to parent page/component
-      if (onProductsFetched) onProductsFetched(data);
-    } catch (err) {
-      console.error("Failed to fetch products:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <BlockStack>
       <Popover
-        active
-        activator={
-          <Button>
-            Filters{appliedCount ? ` (${appliedCount})` : ""}
-          </Button>
-        }
+       active={open}
+  activator={
+    <Button onClick={() => setOpen(true)}>
+      Filters{appliedCount ? ` (${appliedCount})` : ""}
+    </Button>
+  }
+  onClose={() => {
+    setOpen(false);
+    onClose?.(); // optional callback to parent
+  }}
       >
         <Box padding="300" width="420px">
           <BlockStack gap="300">

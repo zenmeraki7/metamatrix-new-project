@@ -1,4 +1,4 @@
-import { Box, Text } from "@shopify/polaris";
+import { Box, Text, InlineStack, BlockStack, Divider } from "@shopify/polaris";
 import React from "react";
 import { useProductStore } from "../../state/productStore";
 
@@ -13,76 +13,72 @@ type BulkFieldChange = {
 
 type BulkChangesMap = Record<string, BulkFieldChange>;
 
-export default function BulkPreviewRow({
-  productId,
-}: BulkPreviewRowProps): JSX.Element {
+export default function BulkPreviewRow({ productId }: BulkPreviewRowProps) {
   const product = useProductStore((s) => s.productMap[productId]);
-  const changes: BulkChangesMap | undefined =
-    useProductStore((s) => s.bulkChanges[productId]);
+  const changes: BulkChangesMap | undefined = useProductStore(
+    (s) => s.bulkChanges[productId]
+  );
 
   if (!product || !changes) {
-    return <></>;
+    // return <></>;
+    return null;
   }
 
   const fields = Object.keys(changes);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        borderBottom: "1px solid #eee",
-        padding: "8px 12px",
-        background: "white",
-      }}
-    >
-      {/* PRODUCT TITLE */}
-      <div style={{ flex: 2 }}>
-        <Text variant="bodySm" fontWeight="bold">
-          {product.title}
-        </Text>
-      </div>
+    <Box background="bg-surface" padding="300">
+      <InlineStack gap="400" align="start">
+        {/* PRODUCT TITLE */}
+        <Box width="25%">
+          <Text as="h2" variant="bodySm" fontWeight="bold">
+            {product.title}
+          </Text>
+        </Box>
 
-      {/* BEFORE */}
-      <div style={{ flex: 2 }}>
-        {fields.map((field) => (
-          <DiffCell
-            key={field}
-            field={field}
-            value={changes[field].before}
-            tone="subdued"
-          />
-        ))}
-      </div>
+        {/* BEFORE */}
+        <Box width="35%">
+          <BlockStack gap="100">
+            {fields.map((field) => (
+              <DiffCell
+                key={field}
+                field={field}
+                value={changes[field].before}
+                tone="subdued"
+              />
+            ))}
+          </BlockStack>
+        </Box>
 
-      {/* AFTER */}
-      <div style={{ flex: 2 }}>
-        {fields.map((field) => (
-          <DiffCell
-            key={field}
-            field={field}
-            value={changes[field].after}
-            tone="success"
-          />
-        ))}
-      </div>
-    </div>
+        {/* AFTER */}
+        <Box width="35%">
+          <BlockStack gap="100">
+            {fields.map((field) => (
+              <DiffCell
+                key={field}
+                field={field}
+                value={changes[field].after}
+                tone="success"
+              />
+            ))}
+          </BlockStack>
+        </Box>
+      </InlineStack>
+
+      <Divider />
+    </Box>
   );
 }
-
 type DiffCellProps = {
   value: unknown;
   field: string;
-  tone?: "subdued" | "success" | "critical" | "warning";
+  tone?: "subdued" | "success" | "critical" | "caution";
 };
 
-function DiffCell({
-  value,
-  field,
-  tone = "subdued",
-}: DiffCellProps): JSX.Element {
+function DiffCell({ value, field, tone = "subdued" }: DiffCellProps) {
   return (
     <Box paddingBlock="100">
-      <Text tone={tone} as="span">
+      <Text as="span" tone={tone}>
         {field}: {String(value)}
       </Text>
     </Box>

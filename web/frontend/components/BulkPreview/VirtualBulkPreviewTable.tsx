@@ -1,9 +1,10 @@
 import React, { useRef } from "react";
+import { Box, Scrollable } from "@shopify/polaris";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useProductStore } from "../../state/productStore";
 import BulkPreviewRow from "./BulkPreviewRow";
 
-export default function VirtualBulkPreviewTable(): JSX.Element {
+export default function VirtualBulkPreviewTable() {
   const parentRef = useRef<HTMLDivElement | null>(null);
 
   const bulkChanges = useProductStore((s) => s.bulkChanges);
@@ -17,41 +18,29 @@ export default function VirtualBulkPreviewTable(): JSX.Element {
   });
 
   return (
-    <div
-      ref={parentRef}
-      style={{
-        height: "60vh",
-        overflow: "auto",
-        position: "relative",
-      }}
-    >
-      <div
-        style={{
-          height: rowVirtualizer.getTotalSize(),
-          width: "100%",
-          position: "relative",
-        }}
-      >
-        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-          const productId = ids[virtualRow.index];
+    <Scrollable shadow height="60vh">
+      <Box ref={parentRef}>
+        <Box minHeight={`${rowVirtualizer.getTotalSize()}px`}>
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const productId = ids[virtualRow.index];
 
-          return (
-            <div
-              key={virtualRow.key}
-              ref={rowVirtualizer.measureElement}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                transform: `translateY(${virtualRow.start}px)`,
-                width: "100%",
-              }}
-            >
-              <BulkPreviewRow productId={productId} />
-            </div>
-          );
-        })}
-      </div>
-    </div>
+            return (
+              /* REQUIRED NON-POLARIS NODE (virtualization primitive) */
+              // Virtual scrolling ❌ Not supported in polaris
+              // transform / translateY ❌ Not exposed in polaris
+              <div
+                key={virtualRow.key}
+                ref={rowVirtualizer.measureElement}
+                style={{
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <BulkPreviewRow productId={productId} />
+              </div>
+            );
+          })}
+        </Box>
+      </Box>
+    </Scrollable>
   );
 }

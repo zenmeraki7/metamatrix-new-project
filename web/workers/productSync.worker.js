@@ -63,6 +63,16 @@ export const worker = new Worker(
                 url
                 altText
               }
+              
+              # ✅ ADD THIS - Fetch collections
+              collections(first: 250) {
+                edges {
+                  node {
+                    id
+                  }
+                }
+              }
+              
               variants(first: 50) {
                 edges {
                   node {
@@ -113,6 +123,11 @@ export const worker = new Worker(
       const bulkOps = products.map(({ node }) => {
         const shopifyId = node.id.replace("gid://shopify/Product/", "");
 
+        // ✅ Extract collection IDs
+        const collectionIds = node.collections?.edges?.map(
+          (edge) => edge.node.id
+        ) || [];
+
         return {
           updateOne: {
             filter: {
@@ -130,6 +145,10 @@ export const worker = new Worker(
                 status: node.status || "DRAFT",
                 productType: node.productType || "",
                 tags: Array.isArray(node.tags) ? node.tags : [],
+                
+                // ✅ ADD THIS - Save collections
+                collections: collectionIds,
+                
                 totalInventory: node.totalInventory ?? 0,
                 createdAt: new Date(node.createdAt),
                 updatedAt: new Date(node.updatedAt),

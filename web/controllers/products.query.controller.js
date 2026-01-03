@@ -26,6 +26,12 @@ export async function queryProducts(req, res) {
     const cursor = typeof req.body?.cursor === "string" ? req.body.cursor : null;
     const filterDsl = req.body?.filter || null;
 
+    console.log(
+  "\n[API] Incoming filter DSL:",
+  JSON.stringify(req.body?.filter, null, 2)
+);
+
+
     // ✅ ALWAYS start with shopId
     let baseQuery = { shopId };
 
@@ -44,6 +50,26 @@ export async function queryProducts(req, res) {
 
     // 🔍 DEBUGGING: Check what's actually in the database
     console.log("\n=== DEBUG INFO ===");
+
+    // Add RIGHT AFTER the "=== DEBUG INFO ===" section in queryProducts
+
+const collectionDebug = await Product.aggregate([
+  { $match: { shopId } },
+  { $project: { 
+    hasCollections: { $gt: [{ $size: { $ifNull: ["$collections", []] } }, 0] },
+    collectionsCount: { $size: { $ifNull: ["$collections", []] } },
+    collections: 1,
+    title: 1
+  }},
+  { $group: {
+    _id: "$hasCollections",
+    count: { $sum: 1 },
+    sample: { $first: "$$ROOT" }
+  }}
+]);
+
+console.log("9. Collection field analysis:", JSON.stringify(collectionDebug, null, 2));
+
     console.log("1. Base query:", JSON.stringify(baseQuery, null, 2));
     
     // ✅ All debug queries should include shopId

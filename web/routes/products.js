@@ -77,4 +77,5 @@ router.get("/", async (req, res) => {
 });
 router.get("/products", listProducts);
 router.post("/search", queryProducts);
+
 export default router;

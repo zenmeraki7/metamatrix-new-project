@@ -12,6 +12,7 @@ const productSchema = new mongoose.Schema(
     title: { type: String, required: true },
     handle: String,
     description: String,
+    collections: [String],
     status: { type: String, enum: ["ACTIVE", "DRAFT", "ARCHIVED"], default: "DRAFT" },
     vendor: String,
     productType: String,

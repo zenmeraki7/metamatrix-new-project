@@ -16,7 +16,7 @@ const FIELD_MAP = {
   "product.productType": "productType",
   "product.tags": "tags",
   "product.themeTemplate": "themeTemplate",
-  "product.collectionId": "collectionId",
+  "product.collectionId": "collections",
   "product.productCategory": "productCategory",
 
   // ───────────── Variant fields ─────────────
@@ -41,6 +41,14 @@ function normalizeField(field) {
  */
 export function compileOperator(condition) {
   if (!condition || !condition.op || !condition.field) return {};
+
+    console.log("🔍 COMPILE:", {
+    original: condition.field,
+    normalized: normalizeField(condition.field),
+    operator: condition.op,
+    value: condition.value
+  });
+
 
   // 🔑 Normalize field BEFORE canonical conversion
   const normalizedCondition = {

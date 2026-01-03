@@ -62,6 +62,7 @@ app.use("/api/products", productsRouter);
 console.log("Products router mounted at /api/products");
 
 app.use("/api/collections", collectionsRouter);
+console.log("✅ Collections router mounted at /api/collections");
 
 app.get("/api/products/count", async (_req, res) => {
   const client = new shopify.api.clients.Graphql({

@@ -60,8 +60,8 @@ export default function DescriptionFilter({
       >
         Description
       </Button>
-
-      <Collapsible open={isOpen}>
+   {/*  Polaris 13 requires `id` */}
+      <Collapsible open={isOpen} id="description-filter-collapsible">
         <BlockStack gap="200">
           <Select
             label="Condition"

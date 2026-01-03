@@ -36,7 +36,7 @@ export default function OperatorSelector({
   groupIndex,
   ruleIndex,
   rule,
-}: OperatorSelectorProps): JSX.Element {
+}: OperatorSelectorProps){
   const updateRule = useFilterStore((s) => s.updateRule);
 
   const operatorOptions: Record<FieldValueType | "default", Operator[]> = {

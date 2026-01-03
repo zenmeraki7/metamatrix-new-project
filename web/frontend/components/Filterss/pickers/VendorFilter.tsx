@@ -29,7 +29,7 @@ export function VendorFilter({
         Vendor
       </Button>
 
-      <Collapsible open={isOpen}>
+      <Collapsible open={isOpen}  id="vendor-filter-collapsible">
         <BlockStack gap="200">
           <Select
             label="Operator"

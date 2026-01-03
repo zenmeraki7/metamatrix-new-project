@@ -59,8 +59,8 @@ export default function BarcodeFilter({
       >
         Barcode
       </Button>
-
-      <Collapsible open={isOpen}>
+{/* id must be unique on the page if you have multiple collapsibles. */}
+      <Collapsible open={isOpen} id="barcode-filter-collapsible">     
         <BlockStack gap="200">
           <Select
             label="Condition"

@@ -1,8 +1,4 @@
-import {
-  TextField,
-  Select,
-  InlineStack,
-} from "@shopify/polaris";
+import { TextField, Select, InlineStack } from "@shopify/polaris";
 
 import { TagPicker } from "./pickers/TagPicker";
 import { CollectionPicker } from "./pickers/CollectionPicker";
@@ -20,18 +16,9 @@ type Props = {
 
 /* ---------------- component ---------------- */
 
-export function ValueInput({
-  type,
-  operator,
-  picker,
-  value,
-  onChange,
-}: Props) {
+export function ValueInput({ type, operator, picker, value, onChange }: Props) {
   /* ---------- operators that need NO value ---------- */
-  if (
-    operator === "is_blank" ||
-    operator === "is_not_blank"
-  ) {
+  if (operator === "is_blank" || operator === "is_not_blank") {
     return null;
   }
 
@@ -55,30 +42,15 @@ export function ValueInput({
   }
 
   if (picker === "tag") {
-    return (
-      <TagPicker
-        value={value ?? []}
-        onChange={onChange}
-      />
-    );
+    return <TagPicker value={value ?? []} onChange={onChange} />;
   }
 
   if (picker === "collection") {
-    return (
-      <CollectionPicker
-        value={value ?? []}
-        onChange={onChange}
-      />
-    );
+    return <CollectionPicker value={value ?? []} onChange={onChange} />;
   }
 
   if (picker === "metafield") {
-    return (
-      <MetafieldKeyPicker
-        value={value}
-        onChange={onChange}
-      />
-    );
+    return <MetafieldKeyPicker value={value} onChange={onChange} />;
   }
 
   /* ---------------- type based ---------------- */
@@ -102,9 +74,8 @@ export function ValueInput({
           labelHidden
           type="number"
           value={value ?? ""}
-          onChange={(v) =>
-            onChange(v === "" ? null : Number(v))
-          }
+          onChange={(v) => onChange(v === "" ? null : Number(v))}
+          autoComplete="off" // <-- add this
         />
       );
 
@@ -116,6 +87,7 @@ export function ValueInput({
           type="date"
           value={value ?? ""}
           onChange={onChange}
+          autoComplete="off" // <-- add this
         />
       );
 
@@ -134,6 +106,7 @@ export function ValueInput({
                 min: v === "" ? null : Number(v),
               })
             }
+            autoComplete="off" // <-- add this
           />
           <TextField
             label="Max"
@@ -147,6 +120,7 @@ export function ValueInput({
                 max: v === "" ? null : Number(v),
               })
             }
+            autoComplete="off" // <-- add this
           />
         </InlineStack>
       );

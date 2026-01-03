@@ -16,7 +16,7 @@ export default function ValueInput({
   groupIndex,
   ruleIndex,
   rule,
-}: ValueInputProps): JSX.Element {
+}: ValueInputProps) {
   const updateRule = useFilterStore((s) => s.updateRule);
 
   return (
@@ -26,6 +26,7 @@ export default function ValueInput({
       onChange={(value: string) =>
         updateRule(groupIndex, ruleIndex, { value })
       }
+       autoComplete="off" // <-- Required in Polaris 13
     />
   );
 }

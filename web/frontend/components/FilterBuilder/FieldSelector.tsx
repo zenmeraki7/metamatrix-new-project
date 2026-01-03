@@ -16,7 +16,7 @@ export default function FieldSelector({
   groupIndex,
   ruleIndex,
   rule,
-}: FieldSelectorProps): JSX.Element {
+}: FieldSelectorProps){
   const updateRule = useFilterStore((s) => s.updateRule);
 
   return (

@@ -21,7 +21,8 @@ export function InventoryFilter({ isOpen, onToggle, min, max, onMinChange, onMax
       >
         Inventory
       </Button>
-      <Collapsible open={isOpen}>
+       {/*  Added required `id` for Polaris 13 */}
+      <Collapsible open={isOpen}  id="inventory-filter-collapsible">
         <InlineStack gap="300">
           <TextField label="Min" value={min} onChange={onMinChange} autoComplete="off" />
           <TextField label="Max" value={max} onChange={onMaxChange} autoComplete="off" />

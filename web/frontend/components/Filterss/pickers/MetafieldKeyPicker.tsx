@@ -1,6 +1,12 @@
 // components/MetafieldKeyPicker.tsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BlockStack, Button, Collapsible, ChoiceList, TextField } from "@shopify/polaris";
+import {
+  BlockStack,
+  Button,
+  Collapsible,
+  ChoiceList,
+  TextField,
+} from "@shopify/polaris";
 import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
 type OwnerType = "PRODUCT" | "VARIANT" | "COLLECTION";
@@ -57,7 +63,9 @@ export function MetafieldKeyPicker({
         if (typeFilter) params.set("type", typeFilter);
         if (cursor) params.set("cursor", cursor);
 
-        const r = await fetch(`/api/metafields/keys/search?${params.toString()}`);
+        const r = await fetch(
+          `/api/metafields/keys/search?${params.toString()}`
+        );
         const data: Resp = await r.json();
 
         setOptions((prev) => (cursor ? [...prev, ...data.items] : data.items));
@@ -89,7 +97,10 @@ export function MetafieldKeyPicker({
 
   const loadMore = useCallback(() => {
     if (!hasNext || loading) return;
-    fetchKeys({ q: latestQueryRef.current.trim().toLowerCase(), cursor: nextCursor });
+    fetchKeys({
+      q: latestQueryRef.current.trim().toLowerCase(),
+      cursor: nextCursor,
+    });
   }, [fetchKeys, hasNext, loading, nextCursor]);
 
   // Encode triple as one string for ChoiceList
@@ -113,16 +124,20 @@ export function MetafieldKeyPicker({
       >
         {label}
       </Button>
-      <Collapsible open={isOpen}>
+      <Collapsible open={isOpen} id="metafield-key-picker-collapsible">
         <BlockStack gap="200">
           <TextField
+            label="Metafield key" // required
+            labelHidden // hide it visually if needed
             placeholder="Search namespace or key..."
             value={inputValue}
             onChange={onInputChange}
             disabled={disabled || loading}
+            autoComplete="off" // ✅ required in Polaris 13
           />
           {polarisChoices.length > 0 ? (
             <ChoiceList
+              title="Metafield Keys"
               titleHidden
               allowMultiple
               choices={polarisChoices}
@@ -132,7 +147,11 @@ export function MetafieldKeyPicker({
             />
           ) : (
             <div style={{ padding: "12px", fontSize: "14px", color: "#666" }}>
-              {loading ? "Loading..." : inputValue.trim() ? `No metafield keys found for "${inputValue.trim()}".` : "No metafield keys found."}
+              {loading
+                ? "Loading..."
+                : inputValue.trim()
+                ? `No metafield keys found for "${inputValue.trim()}".`
+                : "No metafield keys found."}
             </div>
           )}
           {hasNext && (

@@ -67,7 +67,6 @@
 //   );
 // }
 
-
 // web/frontend/components/FilterBuilder/FilterRule.tsx
 
 import { memo, useState, useCallback } from "react";
@@ -77,7 +76,7 @@ import {
   Box,
   Select,
   TextField,
-  Stack,
+  InlineStack,
 } from "@shopify/polaris";
 
 import { useFilterStore } from "../../stores/filterStore";
@@ -129,8 +128,7 @@ export const FilterRule = memo(function FilterRule({
       onClick={() => setOpen(true)}
       onRemove={() => removeRule(groupIndex, ruleIndex)}
     >
-      <strong>{rule.fieldLabel}</strong>{" "}
-      {rule.operator}{" "}
+      <strong>{rule.fieldLabel}</strong> {rule.operator}{" "}
       <span>{rule.value || "…"}</span>
     </Tag>
   );
@@ -143,7 +141,7 @@ export const FilterRule = memo(function FilterRule({
       sectioned
     >
       <Box minWidth="280px">
-        <Stack gap="300" wrap>
+        <InlineStack gap="200" wrap>
           <Select
             label="Operator"
             labelHidden
@@ -170,7 +168,7 @@ export const FilterRule = memo(function FilterRule({
             }
             autoComplete="off"
           />
-        </Stack>
+        </InlineStack>
       </Box>
     </Popover>
   );

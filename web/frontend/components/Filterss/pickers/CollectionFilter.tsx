@@ -44,9 +44,9 @@ export function CollectionFilter({
   const ids = value ? value.split(",").filter(Boolean) : [];
 
   const [inputValue, setInputValue] = useState("");
-  const [options, setOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [options, setOptions] = useState<{ value: string; label: string }[]>(
+    []
+  );
   const [loading, setLoading] = useState(false);
 
   const nextCursorRef = useRef<string | null>(null);
@@ -97,8 +97,8 @@ export function CollectionFilter({
       >
         Collection
       </Button>
-
-      <Collapsible open={isOpen}>
+      {/*  Added required `id` */}
+      <Collapsible open={isOpen} id="collection-filter-collapsible">
         <BlockStack gap="200">
           <Select
             label="Condition"

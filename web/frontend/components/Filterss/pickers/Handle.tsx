@@ -60,8 +60,8 @@ export default function HandleFilter({
       >
         Handle
       </Button>
-
-      <Collapsible open={isOpen}>
+      {/* ✅ Added required `id` */}
+      <Collapsible open={isOpen} id="handle-filter-collapsible">
         <BlockStack gap="200">
           <Select
             label="Condition"

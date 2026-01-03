@@ -15,7 +15,7 @@ type ProductPreviewDrawerProps = {
 
 export default function ProductPreviewDrawer({
   product,
-}: ProductPreviewDrawerProps): JSX.Element {
+}: ProductPreviewDrawerProps) {
   const close = useProductStore((s) => s.closePreview);
 
   return (
@@ -25,13 +25,13 @@ export default function ProductPreviewDrawer({
         saveAction={{ content: "Close", onAction: close }}
       />
 
-      <Card sectioned>
+      <Card>
         <Text variant="headingLg" as="h2">
           {product.title}
         </Text>
-        <Text>ID: {product.id}</Text>
-        <Text>Vendor: {product.vendor}</Text>
-        <Text>Price: {product.price}</Text>
+        <Text as="p">ID: {product.id}</Text>
+        <Text as="p">Vendor: {product.vendor}</Text>
+        <Text as="p">Price: {product.price}</Text>
       </Card>
     </Frame>
   );

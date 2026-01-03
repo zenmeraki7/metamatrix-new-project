@@ -55,8 +55,8 @@ export default function DateFilter({
       >
         {label}
       </Button>
-
-      <Collapsible open={isOpen}>
+      {/* Added required `id` for Polaris 13 */}
+      <Collapsible open={isOpen} id="date-filter-collapsible">
         <BlockStack gap="200">
           <Select
             label="Operator"

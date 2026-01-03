@@ -91,16 +91,20 @@ export function TagPicker({
       >
         {label}
       </Button>
-      <Collapsible open={isOpen}>
+      <Collapsible open={isOpen} id="tag-picker-collapsible">
         <BlockStack gap="200">
           <TextField
+           label="Search"
+            labelHidden
             placeholder="Search tags..."
             value={inputValue}
             onChange={onInputChange}
             disabled={disabled || loading}
+            autoComplete="off"
           />
           {polarisChoices.length > 0 ? (
             <ChoiceList
+             title="Tags"  
               titleHidden
               allowMultiple
               choices={polarisChoices}

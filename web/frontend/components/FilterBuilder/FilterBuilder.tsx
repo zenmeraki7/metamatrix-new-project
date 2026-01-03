@@ -4,7 +4,8 @@ import { memo } from "react";
 import {
   Card,
   Box,
-  Stack,
+  InlineStack,
+  BlockStack,
   Button,
   Text,
   Icon,
@@ -21,31 +22,25 @@ export const FilterBuilder = memo(function FilterBuilder() {
   const addRule = useFilterStore((s) => s.addRule);
   const clearAll = useFilterStore((s) => s.clearAll);
 
-  const hasActiveFilters = groups.some(
-    (group) => group.rules.length > 0
-  );
+  const hasActiveFilters = groups.some((group) => group.rules.length > 0);
 
   return (
     <Card padding="400">
       {/* Header */}
-      <Stack align="space-between" blockAlign="center">
-        <Stack gap="200" blockAlign="center">
+      <InlineStack align="space-between" blockAlign="center">
+        <InlineStack gap="200" blockAlign="center">
           <Icon source={FilterIcon} />
           <Text as="h2" variant="headingSm">
             Filters
           </Text>
-        </Stack>
+        </InlineStack>
 
         {hasActiveFilters && (
-          <Button
-            variant="plain"
-            tone="critical"
-            onClick={clearAll}
-          >
+          <Button variant="plain" tone="critical" onClick={clearAll}>
             Clear all
           </Button>
         )}
-      </Stack>
+      </InlineStack>
 
       {/* Groups */}
       <Box paddingBlockStart="400">
@@ -53,11 +48,13 @@ export const FilterBuilder = memo(function FilterBuilder() {
           <Box key={group.id}>
             {groupIndex > 0 && (
               <Box paddingBlock="300">
-                <Text tone="subdued">OR</Text>
+                <Text as="p" tone="subdued">
+                  OR
+                </Text>
               </Box>
             )}
 
-            <Stack gap="200" wrap>
+            <InlineStack gap="200" wrap>
               {group.rules.map((rule, ruleIndex) => (
                 <FilterRule
                   key={rule.id}
@@ -74,7 +71,7 @@ export const FilterBuilder = memo(function FilterBuilder() {
               >
                 And
               </Button>
-            </Stack>
+            </InlineStack>
           </Box>
         ))}
       </Box>

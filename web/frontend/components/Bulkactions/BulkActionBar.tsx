@@ -2,11 +2,12 @@ import { memo, useState, useCallback } from "react";
 import {
   Box,
   Card,
-  Stack,
   Button,
   Text,
   Popover,
   ActionList,
+  InlineStack,
+  BlockStack,
 } from "@shopify/polaris";
 
 import { useSelectionStore } from "../../stores/selectionStore";
@@ -40,7 +41,6 @@ export const BulkActionBar = memo(function BulkActionBar() {
 
       const jobId = crypto.randomUUID();
 
-      // Optimistic job insert
       upsertJob({
         id: jobId,
         type: payload.actionType,
@@ -67,7 +67,6 @@ export const BulkActionBar = memo(function BulkActionBar() {
           throw new Error("Bulk action failed");
         }
 
-        // Backend will handle job updates
         clearSelection();
       } catch (err: any) {
         useJobStore.getState().updateJob(jobId, {
@@ -84,20 +83,17 @@ export const BulkActionBar = memo(function BulkActionBar() {
   if (selectedCount === 0) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 20,
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 1000,
-        width: "90%",
-        maxWidth: 640,
-      }}
+    <Box
+      position="fixed"
+      insetBlockEnd="400"
+      insetInlineStart="0"
+      insetInlineEnd="0"
+      zIndex="overlay"
     >
       <Card padding="400">
-        <Stack align="space-between" blockAlign="center">
-          <Stack gap="300" blockAlign="center">
+        <InlineStack align="space-between" blockAlign="center">
+          {/* Selected count */}
+          <InlineStack gap="300" blockAlign="center">
             <Box
               background="bg-surface-active"
               padding="200"
@@ -110,9 +106,10 @@ export const BulkActionBar = memo(function BulkActionBar() {
             <Text as="span" tone="subdued">
               selected
             </Text>
-          </Stack>
+          </InlineStack>
 
-          <Stack gap="200">
+          {/* Actions */}
+          <InlineStack gap="200">
             <Button
               variant="tertiary"
               onClick={clearSelection}
@@ -164,9 +161,9 @@ export const BulkActionBar = memo(function BulkActionBar() {
                 ]}
               />
             </Popover>
-          </Stack>
-        </Stack>
+          </InlineStack>
+        </InlineStack>
       </Card>
-    </div>
+    </Box>
   );
 });

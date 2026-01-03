@@ -68,7 +68,7 @@ export function SkuFilter({
         SKU
       </Button>
 
-      <Collapsible open={isOpen}>
+      <Collapsible open={isOpen} id="sku-filter-collapsible">
         <BlockStack gap="200">
           <Select
             label="Operator"

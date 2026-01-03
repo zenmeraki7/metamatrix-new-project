@@ -32,7 +32,7 @@ export function VariantFilter({
       >
         Variant
       </Button>
-      <Collapsible open={isOpen}>
+      <Collapsible open={isOpen} id="variant-filter-collapsible">
         <BlockStack gap="300">
           <TextField
             label="SKU contains"

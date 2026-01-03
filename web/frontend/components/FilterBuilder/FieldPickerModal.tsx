@@ -18,10 +18,12 @@ type RulePosition = {
 
 type FieldType = "string" | "number" | "date" | "boolean";
 
-export default function FieldPickerModal(): JSX.Element | null {
+export default function FieldPickerModal() {
   const open = useFilterStore((s) => s.fieldPickerOpen);
   const close = useFilterStore((s) => s.closeFieldPicker);
-  const rulePos = useFilterStore((s) => s.fieldPickerRule) as RulePosition | null;
+  const rulePos = useFilterStore(
+    (s) => s.fieldPickerRule
+  ) as RulePosition | null;
   const updateRule = useFilterStore((s) => s.updateRule);
   const rebuildAST = useFilterStore((s) => s.rebuildAST);
 
@@ -55,7 +57,7 @@ export default function FieldPickerModal(): JSX.Element | null {
   };
 
   return (
-    <Modal open={open} onClose={close} title="Select a Field" large>
+    <Modal open={open} onClose={close} title="Select a Field">
       <Modal.Section>
         <Scrollable style={{ height: "60vh" }}>
           {/* PRODUCT FIELDS */}
@@ -122,10 +124,7 @@ export default function FieldPickerModal(): JSX.Element | null {
 
           {/* METAFIELD */}
           <Section title="Metafield">
-            <FieldItem
-              label="Custom Metafield..."
-              onClick={selectMetafield}
-            />
+            <FieldItem label="Custom Metafield..." onClick={selectMetafield} />
           </Section>
         </Scrollable>
       </Modal.Section>
@@ -140,7 +139,7 @@ type SectionProps = {
   children: React.ReactNode;
 };
 
-function Section({ title, children }: SectionProps): JSX.Element {
+function Section({ title, children }: SectionProps) {
   return (
     <Box paddingBlock="400">
       <Text variant="headingSm" as="h3">
@@ -156,7 +155,7 @@ type FieldItemProps = {
   onClick: () => void;
 };
 
-function FieldItem({ label, onClick }: FieldItemProps): JSX.Element {
+function FieldItem({ label, onClick }: FieldItemProps) {
   return (
     <Box padding="200">
       <Button fullWidth onClick={onClick}>
@@ -180,5 +179,3 @@ function getDefaultOperator(type: FieldType): string {
       return "contains";
   }
 }
-
-

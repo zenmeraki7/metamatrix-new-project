@@ -42,7 +42,7 @@ export default function PriceFilter({
         Price
       </Button>
 
-      <Collapsible open={isOpen}>
+      <Collapsible open={isOpen} id="price-filter-collapsible">
         <BlockStack gap="200">
           <Select
             label="Condition"

@@ -61,7 +61,7 @@ export default function ProductTitleFilter({
         Product title
       </Button>
 
-      <Collapsible open={isOpen}>
+      <Collapsible open={isOpen} id="product-title-filter-collapsible">
         <BlockStack gap="200">
           <Select
             label="Condition"

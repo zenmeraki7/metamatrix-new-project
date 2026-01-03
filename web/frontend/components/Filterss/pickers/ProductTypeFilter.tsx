@@ -60,7 +60,7 @@ export function ProductTypeFilter({
         Product Type
       </Button>
 
-      <Collapsible open={isOpen}>
+      <Collapsible open={isOpen} id="product-type-filter-collapsible">
         <BlockStack gap="200">
           <Select
             label="Condition"

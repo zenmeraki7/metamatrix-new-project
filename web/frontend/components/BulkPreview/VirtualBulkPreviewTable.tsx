@@ -26,8 +26,8 @@ export default function VirtualBulkPreviewTable() {
 
             return (
               /* REQUIRED NON-POLARIS NODE (virtualization primitive) */
-              // Virtual scrolling ❌ Not supported in polaris
-              // transform / translateY ❌ Not exposed in polaris
+              // Virtual scrolling  Not supported in polaris
+              // transform / translateY  Not exposed in polaris
               <div
                 key={virtualRow.key}
                 ref={rowVirtualizer.measureElement}

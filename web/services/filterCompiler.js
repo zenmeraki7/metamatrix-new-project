@@ -19,6 +19,10 @@ const FIELD_MAP = {
   "product.collectionId": "collections",
   "product.productCategory": "productCategory",
 
+  // ───────────── Date fields ─────────────
+   "product.createdAt": "createdAt",
+  "product.updatedAt": "updatedAt",
+  "product.publishedAt": "publishedAt",
   // ───────────── Variant fields ─────────────
   "variant.sku": "variants.sku",
   "variant.barcode": "variants.barcode",

@@ -1,6 +1,5 @@
 import { Collection, Shop } from "../models/index.js";
 
-
 /* ---------------------------------- */
 /* Cursor helpers                      */
 /* ---------------------------------- */
@@ -29,28 +28,28 @@ function escapeRegex(input) {
 export async function searchCollections(req, res) {
   try {
     const session = res.locals.shopify?.session;
-    if (!session) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    if (!session?.shop) return res.status(401).json({ error: "Unauthorized" });
 
-    // const shopId = session.shopId;
-const shopDomain = session.shop; // demo-zen-store.myshopify.com
+    const shopDomain = session.shop;
 
-const shopDoc = await Shop.findOne({ shopDomain })
-  .select("_id")
-  .lean();
+    const shopDoc = await Shop.findOne({ shopDomain }).select("_id").lean();
+    if (!shopDoc?._id) return res.status(404).json({ error: "Shop not found" });
 
-if (!shopDoc) {
-  return res.status(404).json({ error: "Shop not found" });
-}
+    const q = String(req.query.q ?? "").trim();
 
-const match = { shopId: shopDoc._id };
+    const rawLimit = parseInt(req.query.limit ?? "20", 10);
+    const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? rawLimit : 20, 50));
 
-    const q = String(req.query.q || "").trim();
-    const limit = Math.min(parseInt(req.query.limit || "20", 10), 50);
-    const cursor = decodeCursor(req.query.cursor);
+    const cursorRaw = decodeCursor(req.query.cursor);
 
-    // const match = { shopId };
+    const cursorTitle =
+      cursorRaw && typeof cursorRaw.title === "string" ? cursorRaw.title : null;
+    const cursorId =
+      cursorRaw && typeof cursorRaw.shopifyCollectionId === "string"
+        ? cursorRaw.shopifyCollectionId
+        : null;
+
+    const match = { shopId: shopDoc._id };
 
     if (q) {
       match.$or = [
@@ -59,18 +58,14 @@ const match = { shopId: shopDoc._id };
       ];
     }
 
-    if (cursor?.title && cursor?.shopifyCollectionId) {
-      match.$and = [
-        {
-          $or: [
-            { title: { $gt: cursor.title } },
-            {
-              title: cursor.title,
-              shopifyCollectionId: { $gt: cursor.shopifyCollectionId },
-            },
-          ],
-        },
-      ];
+    if (cursorTitle && cursorId) {
+      match.$and = match.$and || [];
+      match.$and.push({
+        $or: [
+          { title: { $gt: cursorTitle } },
+          { title: cursorTitle, shopifyCollectionId: { $gt: cursorId } },
+        ],
+      });
     }
 
     const docs = await Collection.find(match)
@@ -79,14 +74,12 @@ const match = { shopId: shopDoc._id };
       .limit(limit + 1)
       .lean();
 
-      console.log("Collections returned:", docs.length);
-
-
     const hasNext = docs.length > limit;
     const items = hasNext ? docs.slice(0, limit) : docs;
-    const last = items[items.length - 1];
 
-    res.json({
+    const last = hasNext ? items[items.length - 1] : null;
+
+    return res.json({
       items: items.map((d) => ({
         id: d.shopifyCollectionId,
         title: d.title,
@@ -94,17 +87,19 @@ const match = { shopId: shopDoc._id };
         type: d.type,
       })),
       pageInfo: {
-        nextCursor: hasNext
-          ? encodeCursor({
-              title: last.title,
-              shopifyCollectionId: last.shopifyCollectionId,
-            })
-          : null,
+        nextCursor:
+          hasNext && last
+            ? encodeCursor({
+                // optionally also include q for validation
+                title: last.title,
+                shopifyCollectionId: last.shopifyCollectionId,
+              })
+            : null,
         hasNext,
       },
     });
   } catch (err) {
     console.error("searchCollections failed", err);
-    res.status(500).json({ error: "Failed to search collections" });
+    return res.status(500).json({ error: "Failed to search collections" });
   }
 }

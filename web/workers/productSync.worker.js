@@ -5,9 +5,6 @@ import fetch from "node-fetch";
 import { Product } from "../models/index.js";
 import { connection } from "../queues/redis.js";
 
-/* ---------------------------------- */
-/* Retry helper                        */
-/* ---------------------------------- */
 async function fetchWithRetry(url, options, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -36,10 +33,8 @@ export const worker = new Worker(
     let cursor = null;
     let page = 1;
     let totalSynced = 0;
+    let productsWithCollections = 0; // ✅ Track this
 
-    /* ---------------------------------- */
-    /* GraphQL query                      */
-    /* ---------------------------------- */
     const query = `
       query ($cursor: String) {
         products(first: 50, after: $cursor) {
@@ -64,7 +59,6 @@ export const worker = new Worker(
                 altText
               }
               
-              # ✅ ADD THIS - Fetch collections
               collections(first: 250) {
                 edges {
                   node {
@@ -121,12 +115,21 @@ export const worker = new Worker(
       console.log(`📦 Products fetched: ${products.length}`);
 
       const bulkOps = products.map(({ node }) => {
-        const shopifyId = node.id.replace("gid://shopify/Product/", "");
+        const shopifyId = node.id;
 
-        // ✅ Extract collection IDs
+        // Extract collection IDs
         const collectionIds = node.collections?.edges?.map(
           (edge) => edge.node.id
         ) || [];
+
+        // ✅ DEBUG: Log first few products with collections
+        if (page === 1 && collectionIds.length > 0) {
+          console.log(`\n🔍 DEBUG: Product "${node.title}" has collections:`, collectionIds);
+        }
+
+        if (collectionIds.length > 0) {
+          productsWithCollections++;
+        }
 
         return {
           updateOne: {
@@ -145,10 +148,7 @@ export const worker = new Worker(
                 status: node.status || "DRAFT",
                 productType: node.productType || "",
                 tags: Array.isArray(node.tags) ? node.tags : [],
-                
-                // ✅ ADD THIS - Save collections
-                collections: collectionIds,
-                
+                collectionIds: collectionIds, // ✅ Save collections
                 totalInventory: node.totalInventory ?? 0,
                 createdAt: new Date(node.createdAt),
                 updatedAt: new Date(node.updatedAt),
@@ -197,11 +197,17 @@ export const worker = new Worker(
       }
     }
 
-    return { shop, totalSynced };
+    // ✅ Final summary
+    console.log(`\n📊 SYNC SUMMARY:`);
+    console.log(`   Total synced: ${totalSynced}`);
+    console.log(`   Products with collections: ${productsWithCollections}`);
+    console.log(`   Products without collections: ${totalSynced - productsWithCollections}`);
+
+    return { shop, totalSynced, productsWithCollections };
   },
   {
     connection,
-    concurrency: 1, // 🔥 Shopify-safe
+    concurrency: 1,
   }
 );
 

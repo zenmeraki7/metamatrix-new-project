@@ -111,7 +111,6 @@ const handleClearFilters = async () => {
   primaryAction={{
     content: "Clear filters",
     onAction: handleClearFilters,
-    disabled: !hasFilters,
   }}
   secondaryActions={[
     {

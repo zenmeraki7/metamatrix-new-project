@@ -18,71 +18,76 @@ function pickProductFields() {
 }
 
 export async function listProducts(req, res) {
-  const shopId = req.shopId;
-  const limit = Math.min(parseInt(req.query.limit || "50", 10), 100);
+  const shopIdRaw = req.shopId;
+  const shopId = Types.ObjectId.isValid(shopIdRaw) ? new Types.ObjectId(shopIdRaw) : shopIdRaw;
+
+  const rawLimit = parseInt(req.query.limit ?? "50", 10);
+  const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? rawLimit : 50, 100));
 
   const mode = req.query.mode || "random";
   const direction = req.query.direction || "next";
 
   const cursor = decodeCursor(req.query.cursor);
-  const filtersDsl = req.query.filters
-    ? JSON.parse(req.query.filters)
-    : null;
+  const cursorRand = cursor && typeof cursor.rand === "number" ? cursor.rand : null;
+  const cursorPid = cursor && typeof cursor.shopifyProductId === "string" ? cursor.shopifyProductId : null;
 
-  // ✅ Compile filters
+  let filtersDsl = null;
+  if (req.query.filters) {
+    try {
+      filtersDsl = JSON.parse(req.query.filters);
+    } catch {
+      return res.status(400).json({ error: "Invalid filters JSON" });
+    }
+  }
+
   const compiled = filtersDsl
     ? await compileFilter({ shopId, filter: filtersDsl })
     : { productMatch: { shopId } };
 
-  const baseMatch = compiled.productMatch || { shopId };
+  // force shop scope regardless of compiler correctness
+  const baseMatch = compiled.productMatch ? { $and: [{ shopId }, compiled.productMatch] } : { shopId };
 
   let sort = {};
-  let cursorMatch = {};
+  let cursorMatch = null;
 
-  /* ---------------- RANDOM ---------------- */
   if (mode === "random") {
-    sort =
-      direction === "next"
-        ? { rand: 1, shopifyProductId: 1 }
-        : { rand: -1, shopifyProductId: -1 };
+    const op = direction === "next" ? "$gt" : "$lt";
+    sort = direction === "next"
+      ? { rand: 1, shopifyProductId: 1 }
+      : { rand: -1, shopifyProductId: -1 };
 
-    if (cursor?.rand != null && cursor?.shopifyProductId) {
-      const op = direction === "next" ? "$gt" : "$lt";
+    if (cursorRand != null && cursorPid) {
       cursorMatch = {
         $or: [
-          { rand: { [op]: cursor.rand } },
-          {
-            rand: cursor.rand,
-            shopifyProductId: { [op]: cursor.shopifyProductId },
-          },
+          { rand: { [op]: cursorRand } },
+          { rand: cursorRand, shopifyProductId: { [op]: cursorPid } },
         ],
       };
-    } else {
-      // ✅ DO NOT SKIP FIRST PAGE
-      cursorMatch = {};
     }
   }
 
-  /* ---------------- QUERY ---------------- */
-  const query = {
-    ...baseMatch,
-    ...(Object.keys(cursorMatch).length ? cursorMatch : {}),
-  };
+  const query = cursorMatch ? { $and: [baseMatch, cursorMatch] } : baseMatch;
 
-  let items = await Product.find(query)
+  // correct hasNext
+  let docs = await Product.find(query)
     .select(pickProductFields())
     .sort(sort)
-    .limit(limit)
+    .limit(limit + 1)
     .lean();
 
-  /* ---------------- RANDOM WRAP ---------------- */
+  const hasNext = docs.length > limit;
+  let items = hasNext ? docs.slice(0, limit) : docs;
+
+  // random wrap (optional) - keep but make safe
   if (mode === "random" && !cursor && items.length < limit) {
     const remaining = limit - items.length;
+    const anchorRand = items.length ? items[0].rand : null;
 
-    const wrap = await Product.find({
-      ...baseMatch,
-      rand: { $lt: items[0]?.rand ?? 1 },
-    })
+    const wrapMatch = anchorRand == null
+      ? baseMatch
+      : { $and: [baseMatch, { rand: { $lt: anchorRand } }] };
+
+    const wrap = await Product.find(wrapMatch)
       .select(pickProductFields())
       .sort({ rand: 1, shopifyProductId: 1 })
       .limit(remaining)
@@ -91,31 +96,16 @@ export async function listProducts(req, res) {
     items = items.concat(wrap);
   }
 
-  /* ---------------- CURSORS ---------------- */
   const first = items[0];
   const last = items[items.length - 1];
-
-  const nextCursor = last
-    ? encodeCursor({
-        rand: last.rand,
-        shopifyProductId: last.shopifyProductId,
-      })
-    : null;
-
-  const prevCursor = first
-    ? encodeCursor({
-        rand: first.rand,
-        shopifyProductId: first.shopifyProductId,
-      })
-    : null;
 
   res.json({
     items,
     pageInfo: {
-      hasNext: items.length === limit,
+      hasNext,
       hasPrev: Boolean(cursor),
-      nextCursor,
-      prevCursor,
+      nextCursor: last ? encodeCursor({ rand: last.rand, shopifyProductId: last.shopifyProductId }) : null,
+      prevCursor: first ? encodeCursor({ rand: first.rand, shopifyProductId: first.shopifyProductId }) : null,
     },
   });
 }

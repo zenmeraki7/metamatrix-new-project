@@ -157,3 +157,4 @@ export const FILTER_REGISTRY = {
     ],
   },
 } as const;
+

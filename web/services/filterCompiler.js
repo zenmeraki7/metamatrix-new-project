@@ -16,7 +16,7 @@ const FIELD_MAP = {
   "product.productType": "productType",
   "product.tags": "tags",
   "product.themeTemplate": "themeTemplate",
-  "product.collectionId": "collections",
+  "product.collectionId": "collectionIds",
   "product.productCategory": "productCategory",
 
   // ───────────── Date fields ─────────────
@@ -44,30 +44,27 @@ function normalizeField(field) {
  * Compile a single DSL condition into Mongo fragment
  */
 export function compileOperator(condition) {
-  if (!condition || !condition.op || !condition.field) return {};
+  if (!condition || !condition.op || !condition.field) return null;
 
-    console.log("🔍 COMPILE:", {
-    original: condition.field,
-    normalized: normalizeField(condition.field),
-    operator: condition.op,
-    value: condition.value
-  });
+  const normalizedField = normalizeField(condition.field);
 
-
-  // 🔑 Normalize field BEFORE canonical conversion
   const normalizedCondition = {
     ...condition,
-    field: normalizeField(condition.field),
+    field: normalizedField,
   };
 
   const canonical = dslConditionToCanonical(normalizedCondition);
-  if (!canonical?.op) return {};
+  if (!canonical?.op) return null;
 
   const mongo = canonicalToMongo(canonical);
-  if (!mongo) return {};
+  if (!mongo) return null;
 
-  return canonical.negate ? { $nor: [mongo] } : mongo;
+  return {
+    field: normalizedField, // 🔑 single source of truth
+    mongo: canonical.negate ? { $nor: [mongo] } : mongo,
+  };
 }
+
 
 /**
  * Split conditions into product / variant / inventory buckets
@@ -75,18 +72,19 @@ export function compileOperator(condition) {
 function splitConditions(node, product = [], variant = [], inventory = []) {
   if (!node) return;
 
-  if (node.condition) {
-    const mongoFragment = compileOperator(node.condition);
-    const field = normalizeField(node.condition.field);
+const compiled = compileOperator(node.condition);
+if (!compiled) return;
 
-    if (field.startsWith("variants.")) {
-      variant.push(mongoFragment);
-    } else if (field.startsWith("inventory.")) {
-      inventory.push(mongoFragment);
-    } else {
-      product.push(mongoFragment);
-    }
-  }
+const { field, mongo } = compiled;
+
+if (field.startsWith("variants.")) {
+  variant.push(mongo);
+} else if (field.startsWith("inventory.")) {
+  inventory.push(mongo);
+} else {
+  product.push(mongo);
+}
+
 
   if (node.and) {
     node.and.forEach((n) =>

@@ -57,6 +57,20 @@ export function canonicalToMongo(canonical) {
     case "ends_with":
       return { [field]: { $regex: `${escapeRegExp(value)}$`, $options: "i" } };
 
+      case "is_blank":
+  return {
+    $or: [
+      { [field]: { $exists: false } },
+      { [field]: "" },
+      { [field]: null },
+    ],
+  };
+
+case "is_not_blank":
+  return {
+    [field]: { $nin: ["", null] },
+  };
+
     case "in":
       return { [field]: { $in: normalizeArrayValue(value) } };
 

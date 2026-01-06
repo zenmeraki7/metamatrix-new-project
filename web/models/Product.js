@@ -21,6 +21,7 @@ const productSchema = new mongoose.Schema(
     // ✅ Canonical collection storage (GIDs only)
     collectionIds: {
       type: [String],
+      index: true,
       default: [],
       validate: {
         validator: (arr) =>

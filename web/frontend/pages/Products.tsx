@@ -33,7 +33,9 @@ type Product = {
 /* ------------------------------------------------------------------ */
 
 export default function Products() {
-  const { dsl, hasFilters, clearAll } = useFilterState();
+
+  const filterState = useFilterState();
+  const { dsl, hasFilters, clearAll } = filterState;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -125,24 +127,7 @@ const handleClearFilters = async () => {
 {filtersOpen && (
   <Card>
     <FilterBuilder
-      onProductsFetched={(data) => {
-  const normalized = data.items.map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    status: p.status,
-    vendor: p.vendor,
-    image:
-      p.image ||
-      p.featuredImage?.url ||
-      p.images?.edges?.[0]?.node?.url ||
-      null,
-  }));
-
-  setProducts(normalized);
-  setCursor(data.pageInfo.endCursor);
-  setHasNextPage(data.pageInfo.hasNextPage);
-}}
-
+      filterState={filterState}
       onClose={() => setFiltersOpen(false)}
     />
   </Card>

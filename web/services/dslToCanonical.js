@@ -1,10 +1,14 @@
 // web/services/dslToCanonical.js
 
 export function dslConditionToCanonical(condition) {
-  if (!condition || !condition.op || !condition.field) return null;
+if (!condition || !condition.field) return null;
 
-  const { field, op, value, negate } = condition;
+  let { field, op, value, negate } = condition;
 
+  // ✅ DEFAULT OPERATOR FOR TEXT FIELDS
+  if (!op) {
+    op = "is";
+  }
   // ✅ SPECIAL HANDLING FOR COLLECTION FIELD
   // collectionIds is an array field in MongoDB, so we need to use $in operator
   if (field === "product.collectionId" && (op === "is" || op === "is_not")) {
@@ -12,43 +16,48 @@ export function dslConditionToCanonical(condition) {
       field,
       op: op === "is" ? "in" : "not_in",
       value: [value], // ✅ Wrap single value in array for $in query
-      negate: false   // Already handled by in/not_in operators
+      negate: false, // Already handled by in/not_in operators
     };
   }
 
-  const OPERATOR_MAP = {
-    // equality
-    is: "eq",
-    is_not: "neq",
+  // ✅ ENUM / MULTI-SELECT (status, future enums)
+if (
+  field === "status" &&
+  (op === "is" || op === "is_not")
+) {
+  const values = Array.isArray(value) ? value : [value];
 
-    // string
-    contains: "contains",
-    not_contains: "not_contains",
-    starts_with: "starts_with",
-    ends_with: "ends_with",
-
-    // array
-    in: "in",
-    not_in: "not_in",
-    contains_any: "in",      // for tags with array values
-    contains_all: "all_in",  // for tags (if you implement $all)
-
-    // number
-    lt: "lt",
-    lte: "lte",
-    gt: "gt",
-    gte: "gte",
-    eq: "eq",
-
-    // range
-    between: "between",
-
-    // date
-    is_before: "date_before",
-    is_after: "date_after",
-    is_before_days: "relative_date_before",
-    is_after_days: "relative_date_after",
+  return {
+    field,
+    op: op === "is" ? "in" : "not_in",
+    value: values,
+    negate: false,
   };
+}
+
+
+
+const OPERATOR_MAP = {
+  is: "is",
+  is_not: "is_not",
+
+  contains: "contains",
+  not_contains: "not_contains",
+
+  starts_with: "starts_with",
+  not_starts_with: "not_starts_with",
+
+  ends_with: "ends_with",
+
+  contains_any: "contains_any",
+
+  is_blank: "is_blank",
+  is_not_blank: "is_not_blank",
+
+  equals_ci: "equals_ci",
+  contains_ci: "contains_ci",
+};
+
 
   const canonicalOp = OPERATOR_MAP[op];
 

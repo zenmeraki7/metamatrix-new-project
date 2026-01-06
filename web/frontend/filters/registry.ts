@@ -9,56 +9,70 @@ export type FilterFieldType =
   | "range"
   | "metafield";
 
+  const TEXT_OPERATORS = [
+  "equals",
+  "does_not_equal",
+
+  "contains",
+  "does_not_contain",
+
+  "contains_any_words",
+
+  "starts_with",
+  "does_not_start_with",
+
+  "ends_with",
+
+  "is_blank",
+  "is_not_blank",
+
+  "equals_ci",
+  "contains_ci",
+] as const;
+
 export const FILTER_REGISTRY = {
   /* ---------------- TEXT ---------------- */
 
   "product.title": {
     label: "Title",
     type: "text",
-    operators: [
-      "contains",
-      "equals",
-      "starts_with",
-      "ends_with",
-      "is_blank",
-      "is_not_blank",
-    ],
+    operators: TEXT_OPERATORS,
   },
 
   "product.handle": {
     label: "Handle",
     type: "text",
-    operators: ["contains", "equals", "starts_with"],
+    operators: TEXT_OPERATORS,
   },
 
   "product.description": {
     label: "Description",
     type: "text",
-    operators: ["contains", "is_blank", "is_not_blank"],
+    operators: TEXT_OPERATORS,
   },
 
   "product.vendor": {
     label: "Vendor",
     type: "text",
-    operators: ["contains", "equals"],
+    operators: TEXT_OPERATORS,
   },
 
   "product.productType": {
     label: "Product type",
     type: "text",
-    operators: ["contains", "equals"],
+    operators: TEXT_OPERATORS,
   },
 
   "variant.sku": {
     label: "SKU",
     type: "text",
-    operators: ["contains", "equals"],
+    operators: TEXT_OPERATORS,
   },
 
   "variant.barcode": {
     label: "Barcode",
     type: "text",
-    operators: ["contains", "equals"],
+    operators: TEXT_OPERATORS,
   },
 
   /* ---------------- ENUM ---------------- */

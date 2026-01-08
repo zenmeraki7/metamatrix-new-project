@@ -1,7 +1,7 @@
 // web/services/dslToCanonical.js
 
 export function dslConditionToCanonical(condition) {
-if (!condition || !condition.field) return null;
+  if (!condition || !condition.field) return null;
 
   let { field, op, value, negate } = condition;
 
@@ -9,6 +9,7 @@ if (!condition || !condition.field) return null;
   if (!op) {
     op = "is";
   }
+
   // ✅ SPECIAL HANDLING FOR COLLECTION FIELD
   // collectionIds is an array field in MongoDB, so we need to use $in operator
   if (field === "product.collectionId" && (op === "is" || op === "is_not")) {
@@ -21,43 +22,57 @@ if (!condition || !condition.field) return null;
   }
 
   // ✅ ENUM / MULTI-SELECT (status, future enums)
-if (
-  field === "status" &&
-  (op === "is" || op === "is_not")
-) {
-  const values = Array.isArray(value) ? value : [value];
+  if (field === "status" && (op === "is" || op === "is_not")) {
+    const values = Array.isArray(value) ? value : [value];
 
-  return {
-    field,
-    op: op === "is" ? "in" : "not_in",
-    value: values,
-    negate: false,
-  };
+    return {
+      field,
+      op: op === "is" ? "in" : "not_in",
+      value: values,
+      negate: false,
+    };
+  }
+
+  if (op === "is_after" || op === "is_before") {
+  finalValue = new Date(value);
+  if (isNaN(finalValue.getTime())) {
+    console.warn("[dslToCanonical] Invalid date:", value);
+    return null;
+  }
 }
 
 
+  // ✅ OPERATOR MAP - includes date operators now!
+  const OPERATOR_MAP = {
+    // Text operators
+    is: "is",
+    is_not: "is_not",
+    contains: "contains",
+    not_contains: "not_contains",
+    starts_with: "starts_with",
+    not_starts_with: "not_starts_with",
+    ends_with: "ends_with",
+    contains_any: "contains_any",
+    is_blank: "is_blank",
+    is_not_blank: "is_not_blank",
+    equals_ci: "equals_ci",
+    contains_ci: "contains_ci",
 
-const OPERATOR_MAP = {
-  is: "is",
-  is_not: "is_not",
+    // Number operators
+    eq: "eq",
+    neq: "neq",
+    gt: "gt",
+    gte: "gte",
+    lt: "lt",
+    lte: "lte",
+    between: "between",
 
-  contains: "contains",
-  not_contains: "not_contains",
-
-  starts_with: "starts_with",
-  not_starts_with: "not_starts_with",
-
-  ends_with: "ends_with",
-
-  contains_any: "contains_any",
-
-  is_blank: "is_blank",
-  is_not_blank: "is_not_blank",
-
-  equals_ci: "equals_ci",
-  contains_ci: "contains_ci",
-};
-
+    // Date operators - ADDED!
+    is_after: "is_after",
+    is_before: "is_before",
+    is_after_days: "relative_after",
+    is_before_days: "relative_before",
+  };
 
   const canonicalOp = OPERATOR_MAP[op];
 
@@ -66,10 +81,23 @@ const OPERATOR_MAP = {
     return null;
   }
 
+  // ✅ Convert days to number for relative date operators
+  let finalValue = value;
+  if (op === "is_after_days" || op === "is_before_days") {
+    finalValue = Number(value);
+    if (isNaN(finalValue)) {
+      console.warn(
+        "[dslToCanonical] ⚠️ Invalid number for relative date:",
+        value
+      );
+      return null;
+    }
+  }
+
   const canonical = {
     field,
     op: canonicalOp,
-    value,
+    value: finalValue,
   };
 
   if (negate) canonical.negate = true;

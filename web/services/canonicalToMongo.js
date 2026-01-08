@@ -24,6 +24,10 @@ export function canonicalToMongo(canonical) {
   const { op, field, value } = canonical;
 
   switch (op) {
+    case "is":
+    return { [field]: value };
+    case "is_not":
+      return { [field]: { $ne: value } };
     case "eq":
       return { [field]: value };
 

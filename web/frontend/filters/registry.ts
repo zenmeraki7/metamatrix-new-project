@@ -101,11 +101,18 @@ export const FILTER_REGISTRY = {
 
   /* ---------------- NUMBER ---------------- */
 
-  "variant.price": {
-    label: "Price",
-    type: "number",
-    operators: ["eq", "gt", "gte", "lt", "lte"],
+ "variant.price": {
+  label: "Price",
+  type: "number",
+  operators: ["eq", "neq", "gt", "lt"],
+  operatorLabels: {
+    eq: "=",
+     neq: "≠",
+    gt: ">",
+    lt: "<",
+   
   },
+},
 
   "variant.compareAtPrice": {
     label: "Compare at price",

@@ -108,11 +108,11 @@ console.log("9. Collection field analysis:", JSON.stringify(collectionDebug, nul
     const testMatch = await Product.countDocuments(baseQuery);
     console.log("7. Products matching your query:", testMatch);
     
-    const sampleProducts = await Product.find({ shopId }) // ✅ Add shopId here
-      .select({ shopifyProductId: 1, title: 1, status: 1, totalInventory: 1 })
-      .limit(3)
-      .lean();
-    console.log("8. Sample products:", JSON.stringify(sampleProducts, null, 2));
+    // const sampleProducts = await Product.find({ shopId }) // ✅ Add shopId here
+    //   .select({ shopifyProductId: 1, title: 1, status: 1, totalInventory: 1 })
+    //   .limit(3)
+    //   .lean();
+    // console.log("8. Sample products:", JSON.stringify(sampleProducts, null, 2));
     console.log("=== END DEBUG ===\n");
 
     // Rest of your pagination code...

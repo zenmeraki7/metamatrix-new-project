@@ -48,7 +48,7 @@ export function FilterBuilder({ filterState, onClose }: Props) {
             <Divider />
 
             <InlineStack align="end" gap="200">
-              <Button onClick={clearAll}>Clear All</Button>
+              
               <Button variant="primary" onClick={handleApplyFilters}>
                 Apply Filters
               </Button>

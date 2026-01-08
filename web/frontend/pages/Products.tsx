@@ -35,7 +35,7 @@ type Product = {
 export default function Products() {
 
   const filterState = useFilterState();
-  const { dsl, hasFilters, clearAll } = filterState;
+  const { dsl, hasFilters, clearAll, appliedCount } = filterState;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -98,12 +98,13 @@ console.log("DSL SENT TO API", dsl);
   /* ------------------------------------------------------------------ */
 
 const handleClearFilters = async () => {
+   if (!hasFilters) return;
   clearAll();
+  // setProducts([]);
+  // setCursor(null);
+  // setHasNextPage(true);
   setFiltersOpen(false);
-  setCursor(null);
-  setHasNextPage(true);
-  setProducts([]);
-  await loadProducts("reset");
+  // await loadProducts("reset");
 };
 
 
@@ -113,13 +114,16 @@ const handleClearFilters = async () => {
   primaryAction={{
     content: "Clear filters",
     onAction: handleClearFilters,
+     disabled: !hasFilters,
   }}
-  secondaryActions={[
+    secondaryActions={[
     {
-      content: `Filters${hasFilters ? " (1)" : ""}`,
-      onAction: () => setFiltersOpen((v) => !v),
+      content: `Filters${hasFilters ? ` (${appliedCount})` : ""}`,
+      onAction: () => setFiltersOpen(v => !v),
     },
   ]}
+
+
 >
 
       <BlockStack gap="400">

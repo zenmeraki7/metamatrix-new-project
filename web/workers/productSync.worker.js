@@ -114,70 +114,70 @@ export const worker = new Worker(
       const products = json.data.products.edges;
       console.log(`📦 Products fetched: ${products.length}`);
 
-      const bulkOps = products.map(({ node }) => {
-        const shopifyId = node.id;
+const bulkOps = products.map(({ node }) => {
+  const shopifyProductId = node.id.replace(
+    "gid://shopify/Product/",
+    ""
+  );
 
-        // Extract collection IDs
-        const collectionIds = node.collections?.edges?.map(
-          (edge) => edge.node.id
-        ) || [];
+  const collectionIds =
+    node.collections?.edges?.map(edge =>
+      edge.node.id.replace("gid://shopify/Collection/", "")
+    ) || [];
 
-        // ✅ DEBUG: Log first few products with collections
-        if (page === 1 && collectionIds.length > 0) {
-          console.log(`\n🔍 DEBUG: Product "${node.title}" has collections:`, collectionIds);
-        }
+  return {
+    updateOne: {
+      filter: {
+        shopId: mongoShopId,
+        shopifyProductId,
+      },
+      update: {
+        $set: {
+          handle: node.handle || "",
+          title: node.title || "",
+          description: node.description || "",
+          vendor: node.vendor || "",
+          status: node.status || "DRAFT",
+          productType: node.productType || "",
+          tags: Array.isArray(node.tags) ? node.tags : [],
+          collectionIds,
+          totalInventory: node.totalInventory ?? 0,
+          updatedAt: new Date(node.updatedAt),
+          publishedAt: node.publishedAt
+            ? new Date(node.publishedAt)
+            : null,
+          featuredMedia: node.featuredImage
+            ? {
+                id: node.featuredImage.id || "",
+                url: node.featuredImage.url,
+                alt: node.featuredImage.altText || "",
+              }
+            : null,
+          variants:
+            node.variants?.edges?.map(({ node: v }) => ({
+              shopifyVariantId: v.id.replace(
+                "gid://shopify/ProductVariant/",
+                ""
+              ),
+              sku: v.sku || "",
+              barcode: v.barcode || "",
+              price: v.price ? Number(v.price) : 0,
+              inventoryQuantity: v.inventoryQuantity ?? 0,
+            })) || [],
+          syncedAt: new Date(),
+          deletedAt: null, // 👈 revive if previously deleted
+        },
+        $setOnInsert: {
+          shopId: mongoShopId,
+          shopifyProductId,
+          createdAt: new Date(node.createdAt),
+        },
+      },
+      upsert: true,
+    },
+  };
+});
 
-        if (collectionIds.length > 0) {
-          productsWithCollections++;
-        }
-
-        return {
-          updateOne: {
-            filter: {
-              shopId: mongoShopId,
-              shopifyProductId: shopifyId,
-            },
-            update: {
-              $set: {
-                shopId: mongoShopId,
-                shopifyProductId: shopifyId,
-                handle: node.handle || "",
-                title: node.title || "",
-                description: node.description || "",
-                vendor: node.vendor || "",
-                status: node.status || "DRAFT",
-                productType: node.productType || "",
-                tags: Array.isArray(node.tags) ? node.tags : [],
-                collectionIds: collectionIds, // ✅ Save collections
-                totalInventory: node.totalInventory ?? 0,
-                createdAt: new Date(node.createdAt),
-                updatedAt: new Date(node.updatedAt),
-                publishedAt: node.publishedAt ? new Date(node.publishedAt) : null,
-                featuredMedia: node.featuredImage
-                  ? {
-                      url: node.featuredImage.url,
-                      id: node.featuredImage.id || "",
-                      alt: node.featuredImage.altText || "",
-                    }
-                  : null,
-                variants:
-                  node.variants?.edges?.map(({ node: v }) => ({
-                    shopifyVariantId: v.id.replace(
-                      "gid://shopify/ProductVariant/",
-                      ""
-                    ),
-                    sku: v.sku || "",
-                    barcode: v.barcode || "",
-                    price: v.price ? parseFloat(v.price) : 0,
-                    inventoryQuantity: v.inventoryQuantity ?? 0,
-                  })) || [],
-                syncedAt: new Date(),
-              },
-            },
-            upsert: true,
-          },
-        };
-      });
 
       if (bulkOps.length) {
         await Product.bulkWrite(bulkOps, { ordered: false });

@@ -4,7 +4,7 @@ import { productsCache } from "../services/cache/lru.js";
 import { PRODUCTS_QUERY } from "../services/shopify/products/products.query.js";
 import { listProducts } from "../controllers/products.controller.js";
 import { queryProducts } from "../controllers/products.query.controller.js";
-
+import { withShop } from "../middlewares/withShop.js";
 
 const router = express.Router();
 const PAGE_SIZE = 50;
@@ -76,6 +76,6 @@ router.get("/", async (req, res) => {
   }
 });
 router.get("/products", listProducts);
-router.post("/search", queryProducts);
+router.post("/search", withShop , queryProducts);
 
 export default router;

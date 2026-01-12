@@ -1,4 +1,4 @@
-import { Collection } from "../models/index.js";
+import { Collection, Shop } from "../models/index.js";
 
 /* ---------------------------------- */
 /* Cursor helpers                      */
@@ -27,24 +27,29 @@ function escapeRegex(input) {
 
 export async function searchCollections(req, res) {
   try {
-    // ✅ CORRECT Shopify auth source
     const session = res.locals.shopify?.session;
-    if (!session) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    if (!session?.shop) return res.status(401).json({ error: "Unauthorized" });
 
-    // ✅ Use shop domain as tenant key
-    const shop = session.shop; // e.g. my-store.myshopify.com
+    const shopDomain = session.shop;
 
-    const q = String(req.query.q || "").trim();
-    const limit = Math.min(parseInt(req.query.limit || "20", 10), 50);
-    const cursor = decodeCursor(req.query.cursor);
+    const shopDoc = await Shop.findOne({ shopDomain }).select("_id").lean();
+    if (!shopDoc?._id) return res.status(404).json({ error: "Shop not found" });
 
-    /* ------------------------------- */
-    /* Base match                      */
-    /* ------------------------------- */
+    const q = String(req.query.q ?? "").trim();
 
-    const match = { shop };
+    const rawLimit = parseInt(req.query.limit ?? "20", 10);
+    const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? rawLimit : 20, 50));
+
+    const cursorRaw = decodeCursor(req.query.cursor);
+
+    const cursorTitle =
+      cursorRaw && typeof cursorRaw.title === "string" ? cursorRaw.title : null;
+    const cursorId =
+      cursorRaw && typeof cursorRaw.shopifyCollectionId === "string"
+        ? cursorRaw.shopifyCollectionId
+        : null;
+
+    const match = { shopId: shopDoc._id };
 
     if (q) {
       match.$or = [
@@ -53,27 +58,15 @@ export async function searchCollections(req, res) {
       ];
     }
 
-    /* ------------------------------- */
-    /* Cursor pagination               */
-    /* ------------------------------- */
-
-    if (cursor?.title && cursor?.shopifyCollectionId) {
-      match.$and = [
-        {
-          $or: [
-            { title: { $gt: cursor.title } },
-            {
-              title: cursor.title,
-              shopifyCollectionId: { $gt: cursor.shopifyCollectionId },
-            },
-          ],
-        },
-      ];
+    if (cursorTitle && cursorId) {
+      match.$and = match.$and || [];
+      match.$and.push({
+        $or: [
+          { title: { $gt: cursorTitle } },
+          { title: cursorTitle, shopifyCollectionId: { $gt: cursorId } },
+        ],
+      });
     }
-
-    /* ------------------------------- */
-    /* Query                           */
-    /* ------------------------------- */
 
     const docs = await Collection.find(match)
       .select("shopifyCollectionId title handle type")
@@ -83,9 +76,10 @@ export async function searchCollections(req, res) {
 
     const hasNext = docs.length > limit;
     const items = hasNext ? docs.slice(0, limit) : docs;
-    const last = items[items.length - 1];
 
-    res.json({
+    const last = hasNext ? items[items.length - 1] : null;
+
+    return res.json({
       items: items.map((d) => ({
         id: d.shopifyCollectionId,
         title: d.title,
@@ -93,17 +87,19 @@ export async function searchCollections(req, res) {
         type: d.type,
       })),
       pageInfo: {
-        nextCursor: hasNext
-          ? encodeCursor({
-              title: last.title,
-              shopifyCollectionId: last.shopifyCollectionId,
-            })
-          : null,
+        nextCursor:
+          hasNext && last
+            ? encodeCursor({
+                // optionally also include q for validation
+                title: last.title,
+                shopifyCollectionId: last.shopifyCollectionId,
+              })
+            : null,
         hasNext,
       },
     });
   } catch (err) {
     console.error("searchCollections failed", err);
-    res.status(500).json({ error: "Failed to search collections" });
+    return res.status(500).json({ error: "Failed to search collections" });
   }
 }

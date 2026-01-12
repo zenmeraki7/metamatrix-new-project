@@ -1,32 +1,38 @@
-// models/Collection.js
 import mongoose from "mongoose";
 import { getModel } from "./_utils.js";
 
 const CollectionSchema = new mongoose.Schema(
   {
-    shopId: { type: mongoose.Schema.Types.ObjectId, ref: "Shop", required: true, index: true },
-    shopifyCollectionId: { type: String, required: true, trim: true },
-
-    type: { type: String, enum: ["SMART", "CUSTOM"], required: true, index: true },
-
-    handle: { type: String, required: true, trim: true, index: true },
-    title: { type: String, required: true, trim: true, index: true },
-
-    descriptionHtml: { type: String },
-
-    seo: {
-      title: { type: String },
-      description: { type: String },
+    shopId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Shop",
+      required: true,
+      index: true,
     },
 
-    rules: { type: mongoose.Schema.Types.Mixed },
+    shopifyCollectionId: {
+      type: String, // GID
+      required: true,
+      index: true,
+        validate: {
+    validator: (v) => typeof v === "string" && v.startsWith("gid://shopify/Collection/"),
+    message: "shopifyCollectionId must be a Collection GID",
+  },
+    },
 
-    syncedAt: { type: Date, default: Date.now, index: true },
-    shopifyUpdatedAt: { type: Date, index: true },
+    title: { type: String, required: true },
+    handle: { type: String },
+
+    type: {
+      type: String,
+      enum: ["SMART", "CUSTOM"],
+      required: true,
+    },
   },
   { timestamps: true }
 );
 
-CollectionSchema.index({ shopId: 1, shopifyCollectionId: 1 }, { unique: true });
+CollectionSchema.index({ shopId: 1, title: 1, shopifyCollectionId: 1 }, { unique: true });
+
 
 export default getModel("Collection", CollectionSchema);

@@ -7,74 +7,68 @@ import {
   Divider,
   InlineStack,
 } from "@shopify/polaris";
-import { useFilterState } from "../../filters/useFilterState";
 import { FilterGroup } from "./FilterGroup";
-import { fetchProducts } from "../../filters/api"; // <-- make sure path is correct
 import { useState } from "react";
+import { useFilterState } from "../../filters/useFilterState";
 
-export function FilterBuilder({
-  onProductsFetched,
-  onClose,
-}: {
-  onProductsFetched?: (products: any) => void;
+type Props = {
+  filterState: ReturnType<typeof useFilterState>;
   onClose?: () => void;
-}) {
-
-  const { draft, setDraft, applyDraft, clearAll, appliedCount } = useFilterState();
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-
- const handleApplyFilters = async () => {
-  applyDraft();
-
-  try {
-    setLoading(true);
-    const data = await fetchProducts({
-      direction: "next",
-      filter: draft,
-    });
-
-    onProductsFetched?.(data);
-    setOpen(false); // ✅ close popover
-    onClose?.();
-  } catch (err) {
-    console.error("Failed to fetch products:", err);
-  } finally {
-    setLoading(false);
-  }
+  onProductsFetched?: (data: any) => void; // if you plan to fetch products here
+  fetchProducts?: (args: { direction: string; filter: any }) => Promise<any>;
 };
 
+export function FilterBuilder({ filterState, onClose, onProductsFetched, fetchProducts }: Props) {
+  const { draft, setDraft, applyDraft, clearAll, appliedCount } = filterState;
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleApplyFilters = async () => {
+    applyDraft();
+
+    if (fetchProducts) {
+      try {
+        setLoading(true);
+        const data = await fetchProducts({ direction: "next", filter: draft });
+        onProductsFetched?.(data);
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    setOpen(false); // close popover
+    onClose?.();
+  };
 
   return (
     <BlockStack>
       <Popover
-       active={open}
-  activator={
-    <Button onClick={() => setOpen(true)}>
-      Filters{appliedCount ? ` (${appliedCount})` : ""}
-    </Button>
-  }
-  onClose={() => {
-    setOpen(false);
-    onClose?.(); // optional callback to parent
-  }}
+        active={open}
+        activator={
+          <Button onClick={() => setOpen(true)}>
+            Filters{appliedCount ? ` (${appliedCount})` : ""}
+          </Button>
+        }
+        onClose={() => {
+          setOpen(false);
+          onClose?.();
+        }}
       >
-        <Box padding="300" width="420px">
-          <BlockStack gap="300">
-            {/* 🔑 ROOT GROUP */}
+        <Box padding={300} width="420px">
+          <BlockStack gap={300}>
+            {/* ROOT GROUP */}
             <FilterGroup group={draft} onChange={setDraft} />
 
             <Divider />
 
-             <InlineStack align="end" gap="200">
-        <Button 
-        onClick={clearAll}
-        >Clear All
-        </Button>
-        <Button variant="primary" onClick={handleApplyFilters} disabled={!applyDraft}>
-          {loading ? "Applying..." : "Apply Filters"}
-        </Button>
-      </InlineStack>
+            <InlineStack align="end" gap={200}>
+              <Button variant="primary" onClick={handleApplyFilters} loading={loading}>
+                Apply Filters
+              </Button>
+              <Button onClick={() => clearAll()}>Clear All</Button>
+            </InlineStack>
           </BlockStack>
         </Box>
       </Popover>

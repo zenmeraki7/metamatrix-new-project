@@ -33,7 +33,8 @@ type Product = {
 /* ------------------------------------------------------------------ */
 
 export default function Products() {
-  const { dsl, hasFilters, clearAll } = useFilterState();
+  const filterState = useFilterState();
+  const { dsl, hasFilters, clearAll, appliedCount } = filterState;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -56,8 +57,20 @@ export default function Products() {
           limit: 25,
         });
 
+        const normalized = res.items.map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          vendor: p.vendor,
+          image:
+            p.image ||
+            p.featuredImage?.url ||
+            p.images?.edges?.[0]?.node?.url ||
+            null,
+        }));
+
         setProducts((prev) =>
-          mode === "reset" ? res.items : [...prev, ...res.items]
+          mode === "reset" ? normalized : [...prev, ...normalized]
         );
 
         setCursor(res.pageInfo.endCursor);
@@ -82,17 +95,27 @@ export default function Products() {
   /* Render                                                            */
   /* ------------------------------------------------------------------ */
 
+  const handleClearFilters = async () => {
+    if (!hasFilters) return;
+    clearAll();
+    // setProducts([]);
+    // setCursor(null);
+    // setHasNextPage(true);
+    setFiltersOpen(false);
+    // await loadProducts("reset");
+  };
+
   return (
     <Page
       title="Products"
       primaryAction={{
         content: "Clear filters",
-        onAction: clearAll,
+        onAction: handleClearFilters,
         disabled: !hasFilters,
       }}
       secondaryActions={[
         {
-          content: `Filters${hasFilters ? " (1)" : ""}`,
+          content: `Filters${hasFilters ? ` (${appliedCount})` : ""}`,
           onAction: () => setFiltersOpen((v) => !v),
         },
       ]}
@@ -102,11 +125,7 @@ export default function Products() {
         {filtersOpen && (
           <Card>
             <FilterBuilder
-              onProductsFetched={(data) => {
-                setProducts(data.items); // replace products with new filtered results
-                setCursor(data.pageInfo.endCursor);
-                setHasNextPage(data.pageInfo.hasNextPage);
-              }}
+              filterState={filterState}
               onClose={() => setFiltersOpen(false)}
             />
           </Card>
@@ -141,7 +160,10 @@ export default function Products() {
                   {/* Image */}
                   <IndexTable.Cell>
                     <Thumbnail
-                      source={p.image || ""}
+                      source={
+                        p.image ||
+                        "https://cdn.shopify.com/s/images/admin/no-image-large.gif"
+                      }
                       alt={p.title}
                       size="small"
                     />

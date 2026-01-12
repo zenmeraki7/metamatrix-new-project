@@ -1,11 +1,11 @@
 export async function fetchProducts({
   cursor,
-  direction,
+  direction = "next",   // ✅ DEFAULT
   query,
   filter,
 }: {
   cursor?: string | null;
-  direction: "next" | "prev";
+  direction?: "next" | "prev";  // ✅ OPTIONAL
   query?: string;
   filter?: any;
 }) {

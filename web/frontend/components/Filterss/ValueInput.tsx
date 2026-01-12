@@ -63,14 +63,14 @@ export function ValueInput({
     );
   }
 
-  if (picker === "collection") {
-    return (
-      <CollectionPicker
-        value={value ?? []}
-        onChange={onChange}
-      />
-    );
-  }
+ if (picker === "collection") {
+  return (
+    <CollectionPicker
+      value={value ?? ""}
+      onChange={(id) => onChange(id)}
+    />
+  );
+}
 
   if (picker === "metafield") {
     return (

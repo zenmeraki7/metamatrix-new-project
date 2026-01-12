@@ -3,6 +3,7 @@
 client_id = "6c1a39944a4ab6bdd6e4428ccceb028b"
 name = "new"
 application_url = "https://surplus-foo-created-kathy.trycloudflare.com"
+
 embedded = true
 handle = "new-270"
 
@@ -46,3 +47,4 @@ embedded = false
 
 [build]
 automatically_update_urls_on_dev = true
+

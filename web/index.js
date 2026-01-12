@@ -12,7 +12,10 @@ import PrivacyWebhookHandlers from "./privacy.js";
 import productsRouter from "./routes/products.js";
 import productWebhookRoutes from "./routes/webhooks.products.js";
 import { syncAllProducts } from './services/productSync.js';
+import collectionsRouter from "./routes/collections.routes.js";
 
+// ✅ ADD THIS: Import and start the worker
+import { worker as productSyncWorker } from './workers/productSync.worker.js';
 
 mongoose.set("bufferCommands", false);
 mongoose.set("strictQuery", true);
@@ -36,20 +39,17 @@ app.get(
   shopify.auth.callback(),
   syncAllProducts,
   shopify.redirectToShopifyOrAppRoot()
-
 );
+
 app.post(
   shopify.config.webhooks.path,
   shopify.processWebhooks({ webhookHandlers: PrivacyWebhookHandlers })
 );
 
-
 // Parse JSON before any routes
 app.use(express.json());
 
-
 app.use("/webhooks", productWebhookRoutes);
-
 
 // ✅ APPLY AUTH MIDDLEWARE FIRST - protects all /api routes
 app.use("/api", shopify.validateAuthenticatedSession());
@@ -57,6 +57,9 @@ app.use("/api", shopify.validateAuthenticatedSession());
 // ✅ THEN mount your routes - they'll be protected by the above middleware
 app.use("/api/products", productsRouter);
 console.log("Products router mounted at /api/products");
+
+app.use("/api/collections", collectionsRouter);
+console.log("✅ Collections router mounted at /api/collections");
 
 app.get("/api/products/count", async (_req, res) => {
   const client = new shopify.api.clients.Graphql({
@@ -106,9 +109,11 @@ async function startServer() {
   try {
     const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/shopifyDB";
 
-    await mongoose.connect(MONGO_URI); // <-- no strictQuery, bufferCommands, or old options
-
+    await mongoose.connect(MONGO_URI);
     console.log("✅ MongoDB connected");
+
+    // ✅ ADD THIS: Start the worker
+    console.log("✅ Product sync worker started");
 
     app.listen(PORT, () => {
       console.log(`✅ Server listening on port ${PORT}`);
@@ -118,5 +123,12 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+// ✅ ADD THIS: Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('👋 SIGTERM received, closing worker...');
+  await productSyncWorker.close();
+  process.exit(0);
+});
 
 startServer();

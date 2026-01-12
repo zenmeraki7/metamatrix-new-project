@@ -2,10 +2,12 @@
 import { useMemo, useState } from "react";
 import { FilterDSL } from "./types";
 import { DEFAULT_FILTER_DSL } from "./default";
+import { UI_TO_DSL_OPERATOR_MAP } from "./operatorMap";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
 /* ------------------------------------------------------------------ */
+
 
 function countNodes(dsl: FilterDSL): number {
   if ("and" in dsl) {
@@ -26,6 +28,7 @@ function countNodes(dsl: FilterDSL): number {
   }
   return 0;
 }
+
 function sanitizeDsl(node: any): any | null {
   if (!node) return null;
 
@@ -43,32 +46,33 @@ function sanitizeDsl(node: any): any | null {
     return { [key]: children };
   }
 
-  // CONDITION
-  if ("condition" in node) {
-    const { field, op, value } = node.condition;
+ 
+// CONDITION
+if ("condition" in node) {
+  const { field, op, value } = node.condition;
 
-    // 🚨 Drop empty conditions
-    if (
-      value === null ||
-      value === undefined ||
-      value === ""
-    ) {
-      return null;
-    }
-
-    return {
-      condition: {
-        field,
-        op: op ?? "equals",
-        value,
-      },
-    };
+  // 🚨 Drop empty conditions
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
   }
 
-  return null;
+  const mappedOp =
+    UI_TO_DSL_OPERATOR_MAP[op ?? "equals"] ?? "is";
+
+  return {
+    condition: {
+      field,
+      op: mappedOp,
+      value,
+    },
+  };
 }
 
-
+}
 /* ------------------------------------------------------------------ */
 /* Hook                                                               */
 /* ------------------------------------------------------------------ */

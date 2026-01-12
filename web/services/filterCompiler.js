@@ -16,9 +16,14 @@ const FIELD_MAP = {
   "product.productType": "productType",
   "product.tags": "tags",
   "product.themeTemplate": "themeTemplate",
-  "product.collectionId": "collectionId",
+  "product.collectionId": "collectionIds",
   "product.productCategory": "productCategory",
 
+  // ───────────── Date fields ─────────────
+  "product.createdAt": "createdAt",
+  "product.updatedAt": "updatedAt",
+  "product.publishedAt": "publishedAt",
+  
   // ───────────── Variant fields ─────────────
   "variant.sku": "variants.sku",
   "variant.barcode": "variants.barcode",
@@ -40,42 +45,63 @@ function normalizeField(field) {
  * Compile a single DSL condition into Mongo fragment
  */
 export function compileOperator(condition) {
-  if (!condition || !condition.op || !condition.field) return {};
+  if (!condition || !condition.op || !condition.field) return null;
 
-  // 🔑 Normalize field BEFORE canonical conversion
+  const normalizedField = normalizeField(condition.field);
+
   const normalizedCondition = {
     ...condition,
-    field: normalizeField(condition.field),
+    field: normalizedField,
   };
 
+  console.log("🔍 [compileOperator] Input:", JSON.stringify(normalizedCondition, null, 2));
+
   const canonical = dslConditionToCanonical(normalizedCondition);
-  if (!canonical?.op) return {};
+  console.log("🔍 [compileOperator] Canonical:", JSON.stringify(canonical, null, 2));
+
+  if (!canonical?.op) return null;
 
   const mongo = canonicalToMongo(canonical);
-  if (!mongo) return {};
+  console.log("🔍 [compileOperator] Mongo:", JSON.stringify(mongo, null, 2));
 
-  return canonical.negate ? { $nor: [mongo] } : mongo;
+  if (!mongo) return null;
+
+  return {
+    field: normalizedField,
+    mongo: canonical.negate ? { $nor: [mongo] } : mongo,
+  };
 }
 
 /**
  * Split conditions into product / variant / inventory buckets
+ * 🔧 FIX: Properly pass and accumulate arrays through recursion
  */
 function splitConditions(node, product = [], variant = [], inventory = []) {
-  if (!node) return;
+  if (!node) return { product, variant, inventory };
 
+  // ✅ Compile if this node has a condition
   if (node.condition) {
-    const mongoFragment = compileOperator(node.condition);
-    const field = normalizeField(node.condition.field);
+    const compiled = compileOperator(node.condition);
 
-    if (field.startsWith("variants.")) {
-      variant.push(mongoFragment);
-    } else if (field.startsWith("inventory.")) {
-      inventory.push(mongoFragment);
-    } else {
-      product.push(mongoFragment);
+    if (compiled) {
+      console.log(
+        "[splitConditions] compiled:",
+        JSON.stringify(compiled, null, 2)
+      );
+
+      const { field, mongo } = compiled;
+
+      if (field.startsWith("variants.")) {
+        variant.push(mongo);
+      } else if (field.startsWith("inventory.")) {
+        inventory.push(mongo);
+      } else {
+        product.push(mongo);
+      }
     }
   }
 
+  // ✅ FIXED: Pass the SAME arrays through recursion
   if (node.and) {
     node.and.forEach((n) =>
       splitConditions(n, product, variant, inventory)
@@ -83,16 +109,21 @@ function splitConditions(node, product = [], variant = [], inventory = []) {
   }
 
   if (node.or) {
-    const p = [];
-    const v = [];
-    const i = [];
+    // For OR, we need to collect conditions separately
+    const orProduct = [];
+    const orVariant = [];
+    const orInventory = [];
 
-    node.or.forEach((n) => splitConditions(n, p, v, i));
+    node.or.forEach((n) => 
+      splitConditions(n, orProduct, orVariant, orInventory)
+    );
 
-    if (p.length) product.push({ $or: p });
-    if (v.length) variant.push({ $or: v });
-    if (i.length) inventory.push({ $or: i });
+    if (orProduct.length) product.push({ $or: orProduct });
+    if (orVariant.length) variant.push({ $or: orVariant });
+    if (orInventory.length) inventory.push({ $or: orInventory });
   }
+
+  return { product, variant, inventory };
 }
 
 /**
@@ -104,6 +135,7 @@ export async function compileFilter({ filter }) {
   const variantConditions = [];
   const inventoryConditions = [];
 
+  // 🔧 FIX: Use the returned arrays
   splitConditions(filter, productConditions, variantConditions, inventoryConditions);
 
   const productMatch =
@@ -112,6 +144,8 @@ export async function compileFilter({ filter }) {
       : productConditions.length
       ? { $and: productConditions }
       : {};
+
+  console.log("[compileFilter] Final productMatch:", JSON.stringify(productMatch, null, 2));
 
   return {
     productMatch,

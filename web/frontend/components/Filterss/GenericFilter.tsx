@@ -26,7 +26,7 @@ export function GenericFilter({ condition, onChange, onRemove }: Props) {
   if (!fieldMeta) {
     return (
       <InlineStack gap="200">
-        <Text tone="critical">Unknown field</Text>
+        <Text as="p" tone="critical">Unknown field</Text>
         <Button size="slim" tone="critical" onClick={onRemove}>
           Remove
         </Button>

@@ -76,7 +76,7 @@ export default function Products() {
   useEffect(() => {
     loadProducts("reset");
   }, [dsl]);
-console.log("DSL SENT TO API", dsl);
+  console.log("DSL SENT TO API", dsl);
 
   /* ------------------------------------------------------------------ */
   /* Render                                                            */
@@ -99,19 +99,18 @@ console.log("DSL SENT TO API", dsl);
     >
       <BlockStack gap="400">
         {/* ---------------- Filters ---------------- */}
-{filtersOpen && (
-  <Card>
-    <FilterBuilder
-      onProductsFetched={(data) => {
-        setProducts(data.items); // replace products with new filtered results
-        setCursor(data.pageInfo.endCursor);
-        setHasNextPage(data.pageInfo.hasNextPage);
-      }}
-      onClose={() => setFiltersOpen(false)}
-    />
-  </Card>
-)}
-
+        {filtersOpen && (
+          <Card>
+            <FilterBuilder
+              onProductsFetched={(data) => {
+                setProducts(data.items); // replace products with new filtered results
+                setCursor(data.pageInfo.endCursor);
+                setHasNextPage(data.pageInfo.hasNextPage);
+              }}
+              onClose={() => setFiltersOpen(false)}
+            />
+          </Card>
+        )}
 
         {/* ---------------- Products Table ---------------- */}
         <Card padding="0">
@@ -121,7 +120,9 @@ console.log("DSL SENT TO API", dsl);
             </BlockStack>
           ) : products.length === 0 ? (
             <BlockStack align="center" inlineAlignment="center" padding="500">
-              <Text as="p" tone="subdued">No products found</Text>
+              <Text as="p" tone="subdued">
+                No products found
+              </Text>
             </BlockStack>
           ) : (
             <IndexTable

@@ -39,53 +39,35 @@ export function FilterGroup({ group, onChange }: Props) {
     onChange(isAnd ? { and: updated } : { or: updated });
   };
 
-  return (
-    <BlockStack gap="300">
-      {nodes.map((node, i) => {
-        // Nested group
-        if ("and" in node || "or" in node) {
-          return (
-            <BlockStack key={i} gap="200">
-              <InlineStack align="space-between">
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {isAnd ? "AND group" : "OR group"}
-                </Text>
-
-                <Button
-                  size="slim"
-                  tone="critical"
-                  onClick={() => removeNode(i)}
-                >
-                  Remove
-                </Button>
-              </InlineStack>
-
-              <FilterGroup
-                group={node}
-                onChange={(next) => updateNode(i, next)}
-              />
-            </BlockStack>
-          );
-        }
-
-        // Simple condition
+return (
+  <BlockStack gap="300">
+    {nodes.map((node, i) => {
+      if ("and" in node || "or" in node) {
         return (
-          <GenericFilter
-            key={i}
-            condition={node.condition}
-            onChange={(cond) =>
-              updateNode(i, { condition: cond })
-            }
-            onRemove={() => removeNode(i)}
-          />
+          <BlockStack key={i} gap="200">
+            ...
+          </BlockStack>
         );
-      })}
+      }
 
-      <InlineStack>
-        <Button size="slim" onClick={addCondition}>
-          + Add filter
-        </Button>
-      </InlineStack>
-    </BlockStack>
-  );
+      return (
+        <GenericFilter
+          key={i}
+          condition={node.condition}
+          onChange={(cond) =>
+            updateNode(i, { condition: cond })
+          }
+          onRemove={() => removeNode(i)}
+        />
+      );
+    })}
+
+    <InlineStack>
+      <Button size="slim" onClick={addCondition}>
+        + Add filter
+      </Button>
+    </InlineStack>
+  </BlockStack>
+);
+
 }

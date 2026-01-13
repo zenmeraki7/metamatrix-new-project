@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { Scrollable, Box } from "@shopify/polaris";
 import { useProductStore } from "../../state/productStore";
 import BulkPreviewRow from "./BulkPreviewRow";
 
@@ -17,41 +18,27 @@ export default function VirtualBulkPreviewTable(): JSX.Element {
   });
 
   return (
-    <div
-      ref={parentRef}
-      style={{
-        height: "60vh",
-        overflow: "auto",
-        position: "relative",
-      }}
-    >
-      <div
-        style={{
-          height: rowVirtualizer.getTotalSize(),
-          width: "100%",
-          position: "relative",
-        }}
-      >
+    <Scrollable height="60vh" shadow ref={parentRef}>
+      <Box position="relative" minHeight={`${rowVirtualizer.getTotalSize()}px`}>
         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
           const productId = ids[virtualRow.index];
 
           return (
-            <div
+            <Box
               key={virtualRow.key}
               ref={rowVirtualizer.measureElement}
+              position="absolute"
+              insetInlineStart="0"
+              width="100%"
               style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
                 transform: `translateY(${virtualRow.start}px)`,
-                width: "100%",
               }}
             >
               <BulkPreviewRow productId={productId} />
-            </div>
+            </Box>
           );
         })}
-      </div>
-    </div>
+      </Box>
+    </Scrollable>
   );
 }

@@ -18,7 +18,7 @@ export default function App() {
         <BrowserRouter>
           <QueryProvider>
             <NavMenu>
-              <a href="/" rel="home" />
+            <a href="/" rel="home">Dashboard</a>
               <a href="/Products">
                 {t("NavigationMenu.Products")}
               </a>

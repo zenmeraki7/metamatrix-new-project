@@ -37,5 +37,12 @@
     },
     "title": "Product Counter",
     "totalProductsHeading": "TOTAL PRODUCTS"
-  }
+  },
+  "watchOnYoutube": "Watch Youtube",
+  "share": "Share",
+  "metamatrixDemoVideo": "Metamatrix Demo Video",
+  "loadingVideo": "Loading Video",
+  "demoVideo": "Demo Video",
+  "watchDemo": "Watch Demo",
+  "watchDemoSubtext": "Watch Demo Sub Text"
 }

@@ -2,31 +2,38 @@ import {
   Page,
   BlockStack,
   Layout,
+  InlineGrid,
 } from "@shopify/polaris";
 import { DashboardHeader } from "../components/DashboardHeader";
-import { OverviewSection } from "../components/OverviewSection";
-import { ThingsToDo } from "../components/ThingsToDo";
-import { LearnMoreSection } from "../components/LearnMoreSection";
+import { MetricsGrid } from "../components/MetricsGrid";
+import { QuickActions } from "../components/QuickActions";
+import { ResourcesSection } from "../components/ResourcesSection";
+import DemoVideo from "../components/DemoVideo";
 
 export default function DashboardPage() {
   return (
     <Page>
-      <BlockStack gap="800">
+      <BlockStack gap="600">
         <DashboardHeader />
         
         <Layout>
           <Layout.Section>
-            <OverviewSection />
+            <MetricsGrid />
           </Layout.Section>
 
           <Layout.Section>
-            <ThingsToDo />
+            <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+              <QuickActions />
+              <ResourcesSection />
+            </InlineGrid>
           </Layout.Section>
 
-          <Layout.Section>
-            <LearnMoreSection />
+           <Layout.Section>
+           <DemoVideo/>
           </Layout.Section>
         </Layout>
+
+
       </BlockStack>
     </Page>
   );

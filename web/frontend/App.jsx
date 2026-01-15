@@ -13,27 +13,27 @@ export default function App() {
   const { t } = useTranslation();
 
   return (
-   
-      <PolarisProvider>
-        <BrowserRouter>
-          <QueryProvider>
-            <NavMenu>
-            <a href="/" rel="home">Dashboard</a>
-              <a href="/Products">
-                {t("NavigationMenu.Products")}
-              </a>
-              <a href="/History">
-                {t("NavigationMenu.History")}
-              </a>
-              <a href="/Sync">
-                {t("NavigationMenu.Sync")}
-              </a>
-            </NavMenu>
 
-            <Routes pages={pages} />
-          </QueryProvider>
-        </BrowserRouter>
-      </PolarisProvider>
-  
+    <PolarisProvider>
+      <BrowserRouter>
+        <QueryProvider>
+          <NavMenu>
+            <a href="/" rel="home">Dashboard</a>
+            <a href="/Products">
+              {t("NavigationMenu.Products")}
+            </a>
+            <a href="/History">
+              {t("NavigationMenu.History")}
+            </a>
+            <a href="/Sync">
+              {t("NavigationMenu.Sync")}
+            </a>
+          </NavMenu>
+
+          <Routes pages={pages} />
+        </QueryProvider>
+      </BrowserRouter>
+    </PolarisProvider>
+
   );
 }

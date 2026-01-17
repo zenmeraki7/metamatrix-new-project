@@ -9,7 +9,6 @@ import {
   Button,
   Banner,
   Icon,
-  Divider,
   Box,
 } from "@shopify/polaris";
 import {
@@ -20,7 +19,6 @@ import {
   CollectionIcon,
   CategoriesIcon,
 } from "@shopify/polaris-icons";
-
 import { useNavigate } from "react-router-dom";
 
 export default function ShopifyDataSync() {
@@ -31,182 +29,119 @@ export default function ShopifyDataSync() {
       id: "products",
       icon: ProductIcon,
       title: "Products",
-      description: "Sync all your products with the latest data from Shopify",
-      lastSync: "Fri Jan 09 2026",
-      count: "1,234 items",
-      status: "synced",
+      description: "Keeps product data in sync with Shopify",
+      lastSync: "Today at 3:42 AM",
+      count: "1,234 products",
     },
     {
       id: "types",
       icon: CategoriesIcon,
-      title: "Product Types",
-      description: "Keep your product categorization up to date",
-      lastSync: "Fri Jan 09 2026",
+      title: "Product types",
+      description: "Updates product categorization",
+      lastSync: "Today at 3:42 AM",
       count: "45 types",
-      status: "synced",
     },
     {
       id: "collections",
       icon: CollectionIcon,
       title: "Collections",
-      description: "Sync your product collections and smart collections",
-      lastSync: "Fri Jan 09 2026",
+      description: "Syncs manual and smart collections",
+      lastSync: "Today at 3:42 AM",
       count: "23 collections",
-      status: "synced",
     },
   ];
 
   return (
     <Page
-      title="Shopify Data Sync"
+      title="Shopify data sync"
       backAction={{
         content: "Settings",
-        onAction: () => navigate("/Products"),
+        onAction: () => navigate("/settings"),
       }}
       primaryAction={{
-        content: "Sync All Data",
+        content: "Sync all",
         icon: RefreshIcon,
-        onAction: () => navigate("/Products"),
       }}
     >
       <BlockStack gap="500">
+        {/* Info banner */}
         <Banner tone="info">
           <BlockStack gap="200">
             <Text as="p" fontWeight="semibold">
-              Automatic synchronization enabled
+              Automatic sync enabled
             </Text>
             <Text as="p" tone="subdued">
-              Your data syncs automatically every 24 hours. Last full sync
-              completed on Fri Jan 09 2026 at 3:42 AM.
+              Your store data syncs automatically every 24 hours.
             </Text>
           </BlockStack>
         </Banner>
 
-        <BlockStack gap="400">
-          {syncItems.map((item) => (
-            <Card key={item.id}>
-              <BlockStack gap="400">
-                {/* Header Section */}
-                <InlineStack align="space-between" blockAlign="start">
-                  <InlineStack gap="400" blockAlign="center">
-                    <Box
-                      padding="300"
-                      background="bg-surface-secondary"
-                      borderRadius="200"
-                    >
-                      <Icon source={item.icon} tone="base" />
-                    </Box>
-                    <BlockStack gap="100">
-                      <Text variant="headingMd" as="h3">
-                        {item.title}
-                      </Text>
-                      <Text as="p" variant="bodyMd" tone="subdued">
-                        {item.description}
-                      </Text>
-                    </BlockStack>
-                  </InlineStack>
-                  <Badge tone="success" icon={CheckCircleIcon}>
-                    Synced
-                  </Badge>
-                </InlineStack>
-
-                <Divider />
-
-                {/* Footer Section */}
-                <InlineStack align="space-between" blockAlign="center">
-                  <InlineStack gap="400" wrap={false}>
-                    <InlineStack gap="200" blockAlign="center">
-                      <Icon source={ClockIcon} tone="subdued" />
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        {item.lastSync}
-                      </Text>
-                    </InlineStack>
-                    <Divider borderWidth="050" />
-                    <Text as="p" variant="bodySm" fontWeight="medium">
-                      {item.count}
-                    </Text>
-                  </InlineStack>
-                  <Button icon={RefreshIcon}>Sync Now</Button>
-                </InlineStack>
-              </BlockStack>
-            </Card>
-          ))}
-        </BlockStack>
-
-    {/* Info Card */}
-<Card>
-  <BlockStack gap="300">
-    
-    {/* Icon + Title Inline */}
-    <InlineStack gap="200" blockAlign="center">
-      <Box
-        padding="200"
-        background="bg-surface-success"
-        borderRadius="100"
-      >
-        <Icon source={CheckCircleIcon} tone="success" />
-      </Box>
-
-      <Text variant="headingMd" as="h3">
-        Automatic Sync Schedule
-      </Text>
-    </InlineStack>
-
-    {/* Description */}
-    <Text as="p" variant="bodyMd" tone="subdued">
-      Your MetaMetrix data automatically syncs with Shopify every 24 hours to
-      ensure you always have the latest information. You can also trigger a
-      manual sync anytime for immediate updates.
-    </Text>
-
-  </BlockStack>
-</Card>
-
-
-        {/* Sync History Card */}
-        <Card>
-          <BlockStack gap="400">
-            <Text variant="headingMd" as="h3">
-              Recent Sync Activity
-            </Text>
-            <BlockStack gap="300">
-              {[
-                {
-                  action: "Full sync completed",
-                  time: "Today at 3:42 AM",
-                  status: "success",
-                },
-                {
-                  action: "Products updated",
-                  time: "Yesterday at 3:42 AM",
-                  status: "success",
-                },
-                {
-                  action: "Collections synced",
-                  time: "Jan 08 at 3:42 AM",
-                  status: "success",
-                },
-              ].map((log, index) => (
-                <Box key={index}>
-                  <InlineStack align="space-between" blockAlign="center">
-                    <InlineStack gap="300" blockAlign="center">
-                      <Icon source={CheckCircleIcon} tone="success" />
-                      <Text as="p" variant="bodyMd">
-                        {log.action}
-                      </Text>
-                    </InlineStack>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {log.time}
-                    </Text>
-                  </InlineStack>
-                  {index < 2 && (
-                    <Box paddingBlockStart="300">
-                      <Divider />
-                    </Box>
-                  )}
+        {/* Sync items */}
+        {syncItems.map((item) => (
+          <Card>
+            <InlineStack align="space-between" blockAlign="center">
+              <InlineStack gap="300" blockAlign="center">
+                <Box
+                  background="bg-surface-secondary"
+                  padding="300"
+                  borderRadius="200"
+                >
+                  <Icon source={ProductIcon} />
                 </Box>
-              ))}
-            </BlockStack>
+
+                <BlockStack gap="100">
+                  <Text as="p" variant="headingSm">
+                    Products
+                  </Text>
+                  <Text as="p" tone="subdued">
+                    Keeps product data in sync with Shopify
+                  </Text>
+
+                  {/* ICON + DATE FIXED HERE */}
+                  <InlineStack gap="050" blockAlign="center">
+                    <Box>
+                      <Icon source={ClockIcon} tone="subdued" />
+                    </Box>
+
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      Today at 3:42 AM
+                    </Text>
+
+                    <Text as="span" variant="bodySm" fontWeight="medium">
+                      1,234 products
+                    </Text>
+                  </InlineStack>
+                </BlockStack>
+              </InlineStack>
+
+              <InlineStack gap="200" blockAlign="center">
+                <Badge tone="success">Synced</Badge>
+                <Button size="slim" icon={RefreshIcon}>
+                  Sync
+                </Button>
+              </InlineStack>
+            </InlineStack>
+          </Card>
+        ))}
+
+        {/* Schedule info */}
+        <Card>
+          <BlockStack gap="200">
+            {/* HEADER */}
+            <InlineStack align="space-between" blockAlign="center">
+              <InlineStack gap="200" blockAlign="center">
+                <Icon source={CheckCircleIcon} tone="success" />
+                <Text as="p" variant="headingSm">
+                  Sync schedule
+                </Text>
+              </InlineStack>
+            </InlineStack>
+
+            {/* DESCRIPTION */}
+            <Text as="p" tone="subdued">
+              MetaMetrix automatically syncs with Shopify every 24 hours. You
+              can manually sync anytime if needed.
+            </Text>
           </BlockStack>
         </Card>
       </BlockStack>
